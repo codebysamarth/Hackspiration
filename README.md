@@ -1,337 +1,696 @@
-### Algorand dApp Quick Start Guide (Base Template)
+# 🎫 TicketChain - Blockchain Event Ticketing Platform
 
-This guide helps non‑technical founders and developers quickly prototype and test Web3 ideas on Algorand using this starter. You’ll set up the project, customize the UI via safe AI prompts, mint tokens and NFTs, and interact with smart contracts.
+A decentralized event ticketing system built on Algorand blockchain, featuring NFT-based tickets, resale marketplace with price controls, and automated royalty distribution.
 
-- Repo to fork/clone: `https://github.com/marotipatre/Hackseries-2-QuickStart-template` (source)
-- Works with AlgoKit monorepo structure (contracts + React frontend)
-- Includes prebuilt “cards” demonstrating key patterns:
-  - Counter: simple contract interaction
-  - Bank: complex interaction with contract + Indexer
-  - Asset Create: mint fungible tokens (ASAs)
-  - NFT Mint: upload to IPFS and mint ARC NFTs
-  - Payments: send ALGO and ASA (e.g., USDC)
-
-[Base template repo](https://github.com/marotipatre/Hackseries-2-QuickStart-template)
+![Algorand](https://img.shields.io/badge/Algorand-000000?style=for-the-badge&logo=algorand&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=for-the-badge&logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 
 ---
 
-## 1) Project Setup
+## 📋 Table of Contents
 
-Prerequisites:
-- Docker (running)
-- Node.js 18+ and npm
-- AlgoKit installed (see official docs)
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Prerequisites](#-prerequisites)
+- [Quick Start](#-quick-start)
+- [Detailed Setup](#-detailed-setup)
+- [Deployment Guide](#-deployment-guide)
+- [Project Structure](#-project-structure)
+- [Smart Contract Documentation](#-smart-contract-documentation)
+- [Frontend Documentation](#-frontend-documentation)
+- [Collaboration Workflow](#-collaboration-workflow)
+- [Troubleshooting](#-troubleshooting)
 
-Clone or fork the base template:
+---
 
-```bash
-git clone https://github.com/marotipatre/Hackseries-2-QuickStart-template.git
-cd Hackseries-2-QuickStart-template
+## 🌟 Overview
+
+TicketChain revolutionizes event ticketing by leveraging Algorand blockchain technology to create transparent, secure, and fraud-resistant ticket sales. Each ticket is a unique NFT (Algorand Standard Asset) with built-in transfer controls and resale restrictions.
+
+### **Why Blockchain for Ticketing?**
+
+- **Eliminate Fraud**: NFT-based tickets prevent counterfeiting
+- **Control Resale**: Enforce maximum resale prices to stop scalping
+- **Automated Royalties**: Organizers earn from secondary sales
+- **Transparent Ownership**: Verify ticket authenticity on-chain
+- **Instant Transfers**: Peer-to-peer ticket transfers without intermediaries
+
+---
+
+## ✨ Features
+
+### **For Event Organizers**
+- ✅ Create events with customizable ticket capacity and pricing
+- ✅ Set maximum resale price multipliers (e.g., 150% of original price)
+- ✅ Earn royalties on all secondary market sales (configurable percentage)
+- ✅ Real-time event dashboard (tickets sold, revenue)
+- ✅ QR code scanning at entry with ownership verification
+- ✅ Track scanned tickets to prevent double-entry
+
+### **For Ticket Buyers**
+- ✅ Purchase tickets as NFTs (appear in Algorand wallets)
+- ✅ View owned tickets with asset IDs and event details
+- ✅ List tickets for resale with price controls
+- ✅ Buy from marketplace with automated payment distribution
+- ✅ Proof of ownership verified on TestNet Explorer
+
+### **Technical Features**
+- ✅ Automatic asset opt-in (users don't manually opt-in to NFTs)
+- ✅ Per-user purchase limits (max 5 tickets per account)
+- ✅ Box storage for resale listings and scan registry
+- ✅ Clawback authority for seamless resale transfers
+- ✅ Atomic transactions (payment + NFT transfer)
+
+---
+
+## 🏗️ Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     TICKETCHAIN SYSTEM                      │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                ┌─────────────┴─────────────┐
+                │                           │
+        ┌───────▼────────┐         ┌───────▼────────┐
+        │   FRONTEND     │         │ SMART CONTRACT │
+        │  React + TS    │◄────────┤   (PyTeal)     │
+        │  TailwindCSS   │         │   Algorand     │
+        └───────┬────────┘         └───────┬────────┘
+                │                           │
+        ┌───────▼────────┐         ┌───────▼────────┐
+        │  Wallet Layer  │         │  Blockchain    │
+        │  Pera, Defly   │         │  TestNet/      │
+        │  Exodus, Lute  │         │  MainNet       │
+        └────────────────┘         └────────────────┘
 ```
 
-Bootstrap the workspace (installs deps, sets up venv, etc.):
+### **Data Flow**
 
-```bash
-algokit project bootstrap all
+1. **Ticket Purchase Flow**
+   ```
+   User → Connect Wallet → Purchase Ticket → Payment Txn
+     → Smart Contract Mints NFT → Auto Opt-In → Transfer NFT to User
+     → User's "My Tickets" Updates via Indexer Query
+   ```
+
+2. **Resale Flow**
+   ```
+   User → Select Owned Ticket → Set Price (≤ Max) → List for Resale
+     → Box Storage Stores Listing → Buyer Sends Payment
+     → Contract Distributes: Seller + Royalty to Organizer
+     → Contract Transfers NFT via Clawback → Listing Deleted
+   ```
+
+3. **Entry Scan Flow**
+   ```
+   Organizer → Scan QR/Enter Asset ID → Verify Owner via Indexer
+     → Call mark_scanned() → Write to Box Storage
+     → Check is_scanned() → Reject if Already Scanned
+   ```
+
+---
+
+## 🛠️ Tech Stack
+
+### **Smart Contract (Backend)**
+- **Language**: Python 3.12 with AlgoPy (PyTeal framework)
+- **Platform**: Algorand Blockchain (AVM - Algorand Virtual Machine)
+- **Tools**: 
+  - AlgoKit 2.0+ (development framework)
+  - Poetry (dependency management)
+  - Algorand Indexer (data queries)
+
+### **Frontend (UI)**
+- **Framework**: React 18.2.0 + TypeScript 5.6.3
+- **Build Tool**: Vite 5.4.20
+- **Styling**: TailwindCSS 3.4.17 + DaisyUI 4.12.22
+- **Routing**: React Router DOM 7.1.1
+- **State Management**: React Hooks (useState, useEffect, useMemo)
+
+### **Blockchain Integration**
+- **SDK**: @algorandfoundation/algokit-utils 9.0.0
+- **Wallet**: @txnlab/use-wallet-react 4.0.0
+- **Networks**: AlgoNode (public API for TestNet/MainNet)
+
+### **Development Tools**
+- **Package Manager**: pnpm (frontend), Poetry (contracts)
+- **Linting**: ESLint
+- **Notifications**: Notistack (toast messages)
+- **QR Codes**: qrcode.react 4.2.0 (planned)
+
+---
+
+## 📦 Prerequisites
+
+Before setting up the project, ensure you have:
+
+### **Required Software**
+- **Node.js**: v18+ ([Download](https://nodejs.org/))
+- **pnpm**: Latest version
+  ```powershell
+  npm install -g pnpm
+  ```
+- **Python**: 3.12+ ([Download](https://www.python.org/downloads/))
+- **Poetry**: For Python dependency management
+  ```powershell
+  pip install poetry
+  ```
+- **AlgoKit**: Algorand development toolkit
+  ```powershell
+  pipx install algokit
+  ```
+  
+### **Algorand Wallet (for deployment)**
+- Pera Wallet ([Download](https://perawallet.app/))
+- OR Defly Wallet ([Download](https://defly.app/))
+
+### **TestNet ALGO (free)**
+- Get TestNet ALGO from: https://bank.testnet.algorand.network/
+
+### **Code Editor**
+- VS Code with extensions:
+  - Python
+  - ESLint
+  - Tailwind CSS IntelliSense
+
+---
+
+## 🚀 Quick Start
+
+### **For Team Members (Clone & Run)**
+
+```powershell
+# 1. Clone the repository
+git clone <your-repo-url>
+cd TicketChain
+
+# 2. Setup Smart Contracts
+cd projects/contracts
+poetry install                  # Install Python dependencies
+poetry shell                    # Activate virtual environment
+algokit project run build       # Compile contracts
+
+# 3. Setup Frontend
+cd ../frontend
+pnpm install                    # Install dependencies
+pnpm run dev                    # Start dev server (http://localhost:5174)
+
+# 4. Configure Environment
+# Frontend .env is already configured for TestNet ✅
+# Contracts .env needs your DEPLOYER_MNEMONIC (see Deployment Guide)
 ```
 
-Build all projects:
+---
 
-```bash
+## 🔧 Detailed Setup
+
+### **Step 1: Smart Contract Setup**
+
+```powershell
+# Navigate to contracts directory
+cd projects/contracts
+
+# Install dependencies (first time only)
+poetry install
+
+# Activate virtual environment
+poetry shell
+
+# Build contracts (compile PyTeal → TEAL)
 algokit project run build
 ```
 
-Run the frontend:
+**Expected Output:**
+```
+Building app at .../ticket_contract/contract.py
+Exporting to .../artifacts/ticket_contract
+TicketContract.arc56.json
+✅ Build successful
+```
 
-```bash
+### **Step 2: Frontend Setup**
+
+```powershell
+# Navigate to frontend
 cd projects/frontend
-npm install
-npm run dev
+
+# Install dependencies
+pnpm install
+
+# Start development server
+pnpm run dev
 ```
 
-Optional: alternative starter to compare or borrow patterns from:
+**Expected Output:**
+```
+  VITE v5.4.20  ready in 823 ms
 
-```bash
-git clone https://github.com/Ganainmtech/Algorand-dApp-Quick-Start-Template-TypeScript.git
+  ➜  Local:   http://localhost:5174/
+  ➜  Network: use --host to expose
 ```
 
-References:
-- Algorand Developer Portal: `https://dev.algorand.co/`
-- AlgoKit Workshops: `https://algorand.co/algokit-workshops`
-- Algodevs YouTube: `https://www.youtube.com/@algodevs`
+### **Step 3: Verify Setup**
+
+Open http://localhost:5174/ in your browser. You should see:
+- ✅ TicketChain landing page
+- ✅ Live Event Status dashboard
+- ✅ 4 feature cards (Purchase, Marketplace, Organizer, Scan)
+- ✅ Connect Wallet button (top right)
 
 ---
 
-## 2) Required environment variables (Frontend)
+## 🌐 Deployment Guide
 
-Create `projects/frontend/.env` with the following values for TestNet (adjust as needed):
+### **Step 1: Setup Deployment Wallet**
 
-```bash
-# Network (Algod)
-VITE_ALGOD_SERVER=https://testnet-api.algonode.cloud
-VITE_ALGOD_PORT=
-VITE_ALGOD_TOKEN=
-VITE_ALGOD_NETWORK=testnet
+#### **1.1 Create/Access Algorand Wallet**
+- Install Pera Wallet (mobile) or Defly (browser extension)
+- Create new wallet or import existing
 
-# Indexer (for Bank/indexed reads)
-VITE_INDEXER_SERVER=https://testnet-idx.algonode.cloud
-VITE_INDEXER_PORT=
-VITE_INDEXER_TOKEN=
+#### **1.2 Get TestNet ALGO**
+- Visit: https://bank.testnet.algorand.network/
+- Enter your wallet address
+- Click "Dispense" - Request TestNet ALGO (free)
+- Wait for confirmation
 
-# Optional: KMD (if using a local KMD wallet)
-VITE_KMD_SERVER=http://localhost
-VITE_KMD_PORT=4002
-VITE_KMD_TOKEN=a-super-secret-token
-VITE_KMD_WALLET=unencrypted-default-wallet
-VITE_KMD_PASSWORD=some-password
+#### **1.3 Get Your Mnemonic Phrase**
+- **Pera Wallet**: Settings → Backup Account → Show Recovery Phrase
+- **Defly Wallet**: Settings → Show Secret Phrase
+- **COPY THE 25 WORDS** (e.g., "word1 word2 word3 ... word25")
 
-# Pinata (NFT media + metadata to IPFS)
-# Generate a JWT in Pinata and paste below
-VITE_PINATA_JWT=eyJhbGciOi...  # JWT from Pinata
-# Optional: custom gateway
-VITE_PINATA_GATEWAY=https://gateway.pinata.cloud/ipfs
+#### **1.4 Update `.env` File**
+
+```powershell
+# Navigate to contracts folder
+cd projects/contracts
+
+# Edit .env file (use notepad or VS Code)
+notepad .env
+
+# Add your mnemonic (keep the quotes!):
+DEPLOYER_MNEMONIC="your 25 word mnemonic phrase goes here"
+
+# Save and close
 ```
 
-Notes:
-- Algod/Indexer config is read by `src/utils/network/getAlgoClientConfigs.ts`:
-  - `VITE_ALGOD_SERVER`, `VITE_ALGOD_PORT`, `VITE_ALGOD_TOKEN`, `VITE_ALGOD_NETWORK`
-  - `VITE_INDEXER_SERVER`, `VITE_INDEXER_PORT`, `VITE_INDEXER_TOKEN`
-- Pinata integration expects `VITE_PINATA_JWT` and optional `VITE_PINATA_GATEWAY` for NFT uploads (see `src/utils/pinata.ts`).
-- Restart the dev server after editing `.env`.
+**Example:**
+```env
+DEPLOYER_MNEMONIC="abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon invest"
+ALGOD_SERVER=https://testnet-api.algonode.cloud
+ALGOD_PORT=443
+INDEXER_SERVER=https://testnet-idx.algonode.cloud
+INDEXER_PORT=443
+```
 
-Pinata API keys/JWT: create via Pinata dashboard `https://app.pinata.cloud/developers/api-keys` and use the generated JWT.
+⚠️ **SECURITY WARNING**: 
+- This `.env` file is in `.gitignore` - it will NOT be uploaded to GitHub
+- Never share your mnemonic with anyone!
+- Never commit `.env` to version control
 
 ---
 
-## 3) Project map (what to tweak)
+### **Step 2: Deploy Smart Contract to TestNet**
 
-Frontend location: `projects/frontend`
+```powershell
+# 1. Ensure you're in contracts directory with venv active
+cd projects/contracts
+poetry shell
 
-Key files:
-- `src/Home.tsx` — Landing page
-- `src/components/Transact.tsx` — Payments (ALGO, template for ASA)
-- `src/components/Bank.tsx` — Contract + Indexer demo (deploy, deposit, withdraw, statements, depositors)
-- `src/components/CreateASA.tsx` — Create fungible tokens (ASA)
-- `src/components/MintNFT.tsx` — Mint NFTs with IPFS media/metadata
-- `src/components/AppCalls.tsx` — Example app call wiring to a contract
-- `src/utils/pinata.ts` — Pinata IPFS utilities (file/JSON pin)
-- `src/utils/network/getAlgoClientConfigs.ts` — Network configs from Vite env
+# 2. Verify .env file is configured
+# Check if DEPLOYER_MNEMONIC is set (PowerShell)
+Get-Content .env | Select-String "DEPLOYER_MNEMONIC"
 
-Contracts (generated artifacts, clients):
-- `projects/contracts/smart_contracts/**` and `projects/frontend/src/contracts/**`
+# 3. Deploy to TestNet
+algokit project deploy testnet
+```
+
+**Deployment Process:**
+1. AlgoKit reads your mnemonic from `.env`
+2. Compiles contract to TEAL (if needed)
+3. Creates application on TestNet
+4. Saves App ID to local state
+
+**Expected Output:**
+```
+Loading deployment environment variables...
+Deploying TicketContract...
+✅ TicketContract deployed with:
+   App ID: 123456789
+   App Address: ABCD1234EFGH5678...
+```
+
+**📝 SAVE THE APP ID!** You'll need it for frontend integration.
 
 ---
 
-## 4) Use AI to redesign UI safely (keep logic intact)
+### **Step 3: Initialize Event**
 
-How to work:
-1) Open the target file and copy its full contents.
-2) Paste into your AI tool (ChatGPT/Claude/Gemini).
-3) Use the corresponding prompt below to redesign using TailwindCSS.
-4) Replace only JSX/markup/styles. Do NOT change logic, imports, props, state, handlers, or function calls.
+After deployment, call `create_event()` to set up your first event:
 
-### 4.1 Home (Landing Page)
-
-File: `projects/frontend/src/Home.tsx`
-
-Prompt:
-```
-I'm building an Algorand dApp and want to improve the design of my landing page in projects/frontend/src/Home.tsx. Please redesign the layout using modern web design principles with TailwindCSS. Include:
-- A visually striking hero section with a short headline and subheading
-- A primary call-to-action button that navigates to key features
-- A simple feature grid that highlights the cards: Counter, Bank, Payments, Create Token (ASA), Mint NFT
-- Balanced spacing, responsive design (mobile/desktop), and a Web3/tech-style color theme
-Keep ALL existing logic for wallet connection, navigation, event handlers, and button states EXACTLY as they are — do not change any logic or data flow. Only change the JSX structure and Tailwind classes.
+```powershell
+# Still in contracts directory
+algokit goal app call \
+  --app-id 123456789 \
+  --from <YOUR_WALLET_ADDRESS> \
+  --method "create_event(string,uint64,uint64,uint64,uint64)void" \
+  --arg '"Algorand Hackathon 2026"' \
+  --arg 500 \
+  --arg 50000000 \
+  --arg 150 \
+  --arg 10
 ```
 
-### 4.2 Payments (Transact)
-
-File: `projects/frontend/src/components/Transact.tsx`
-
-Prompt:
-```
-I'm building a payments dApp on Algorand that allows users to send ALGO or USDC to others. I’ve pasted the existing projects/frontend/src/components/Transact.tsx which already contains transaction logic. Please redesign this component using TailwindCSS to look like a clean, modern payment interface:
-- Clear inputs for recipient address and read-only display for amount (1 ALGO in this example)
-- A prominent Send button
-- Helpful labels, subtle validation states, and a simple success message area
-- Responsive, minimal Web3 design aesthetic
-Keep ALL wallet and transaction logic EXACTLY as it is — do not change any function names, props, state variables, or event handlers.
-```
-
-Optional extension prompt (ASA like USDC):
-```
-Extend the UI design to optionally switch between sending ALGO or an ASA (e.g., USDC) without changing existing ALGO logic. Only provide additional JSX blocks and Tailwind classes; do not modify or remove the current payment logic. You can add a new tab-like UI and mock disabled form fields for ASA to show the final look-and-feel.
-```
-
-### 4.3 Bank (Complex contract + Indexer)
-
-File: `projects/frontend/src/components/Bank.tsx`
-
-Prompt:
-```
-This is a "Bank" demo that shows a more complex Algorand contract integration with Indexer queries, boxes, and inner transactions. I’ve pasted projects/frontend/src/components/Bank.tsx. Please enhance the UI with TailwindCSS:
-- Clear App ID input and App Address display
-- Two panels: Deposit (memo + amount) and Withdraw (amount)
-- A status area for loading/spinners and action feedback
-- Paginated, scrollable Statements and Depositors lists, with clear labels and link to explorer
-- Keep it responsive and professional with a dashboard feel
-Do NOT change any logic, props, function names, or data fetching. Only adjust JSX structure and Tailwind classes.
-```
-
-### 4.4 Create ASA (Fungible tokens)
-
-File: `projects/frontend/src/components/CreateASA.tsx`
-
-Prompt:
-```
-I'm building a loyalty/stablecoin-like token on Algorand. I’ve included projects/frontend/src/components/CreateASA.tsx with working ASA creation logic. Please redesign the component using TailwindCSS to present a professional token creation form:
-- Inputs: Token Name, Unit/Symbol, Decimals, Total Supply (base units)
-- A clear, primary "Create Token" button with loading/disabled states
-- A compact help text about each field
-- Minimal dashboard style consistent with the rest of the app
-Keep ALL minting and wallet logic EXACTLY as-is — change ONLY layout and Tailwind classes.
-```
-
-### 4.5 Mint NFT (IPFS + ARC NFT)
-
-File: `projects/frontend/src/components/MintNFT.tsx`
-
-Prompt:
-```
-I'm building an Algorand-based NFT dApp that allows users to mint digital collectibles. I’ve pasted projects/frontend/src/components/MintNFT.tsx which already includes upload to IPFS and NFT mint logic. Please redesign using TailwindCSS:
-- Upload field for image/file with preview
-- Inputs for Name and Description
-- Display upload and mint progress (spinners, progress bars, small status messages)
-- A primary "Mint NFT" button with clear disabled/loading states
-- A link to view the NFT/metadata via the configured IPFS gateway
-Keep ALL wallet, IPFS (Pinata), and minting logic EXACTLY as-is — modify only JSX and Tailwind classes.
-```
+**Parameters Explained:**
+- **Event Name**: "Algorand Hackathon 2026"
+- **Capacity**: 500 tickets
+- **Price**: 50,000,000 microALGO (50 ALGO)
+- **Max Resale Multiplier**: 150 (means 150% = 1.5x original price)
+- **Organizer Royalty**: 10 (10% of resale goes to organizer)
 
 ---
 
-## 5) NFT Environment (Pinata + IPFS)
+### **Step 4: Connect Frontend to Deployed Contract**
 
-- Create Pinata API Key/JWT: `https://app.pinata.cloud/developers/api-keys`
-- Put JWT in `projects/frontend/.env` as `VITE_PINATA_JWT`
-- Optional: set `VITE_PINATA_GATEWAY` to your preferred gateway
-- Restart dev server after changing `.env`:
+#### **4.1 Generate TypeScript Client**
 
-```bash
-npm run dev
+```powershell
+# Navigate to frontend
+cd ../frontend
+
+# Generate TS client from contract ABI
+pnpm run generate:client
 ```
 
-NFT flow uses:
-- `src/utils/pinata.ts` (expects `VITE_PINATA_JWT`, optional `VITE_PINATA_GATEWAY`)
-- `pinFileToIPFS` and `pinJSONToIPFS` endpoints
+This creates `src/contracts/TicketContract.ts` with type-safe methods.
 
----
+#### **4.2 Update Component Files**
 
-## 6) Smart Contract interaction basics
+Edit these 3 files and replace `APP_ID = 0` with your deployed App ID:
 
-- Example TS clients are generated into `projects/frontend/src/contracts`
-- Frontend demo wiring in `src/components/AppCalls.tsx`
-- Use Bank/Counter cards to explore app call patterns, boxes, and Indexer usage
-
-Learn more:
-- Algorand Dev Portal: `https://dev.algorand.co/`
-- AlgoKit Workshops: `https://algorand.co/algokit-workshops`
-- Algodevs YouTube: `https://www.youtube.com/@algodevs`
-
----
-
-## 7) Card overview and tweak ideas
-
-- Counter
-  - Purpose: Simple app call demonstration
-  - Tweak: Typography, spacing, and success toast placement
-  - AI tip: “Add a hero-like header; keep all state/handlers/contract calls unchanged.”
-
-- Bank
-  - Purpose: Complex contract with deposit/withdraw and Indexer reads
-  - Tweak: Two-column layout, data tables with pagination, explorer links
-  - AI tip: “Make statements/depositors scrollable; maintain all function names and handlers.”
-
-- Payments (Transact)
-  - Purpose: Send ALGO (and optionally mock ASA UI)
-  - Tweak: Input clarity, action emphasis, subtle validation messaging
-  - AI tip: “Keep existing ALGO logic identical; ASA tab as UI-only demo.”
-
-- Create ASA
-  - Purpose: Mint fungible token
-  - Tweak: Professional form design, helper text for decimals/total
-  - AI tip: “Do not change the `algorand.send.assetCreate` call; style form and loading states.”
-
-- Mint NFT
-  - Purpose: Upload media/metadata to IPFS, mint an ARC NFT
-  - Tweak: File upload preview, progress messages, gateway links
-  - AI tip: “Keep Pinata calls and NFT mint logic intact; enhance UI and progress indicators.”
-
----
-
-## 8) Troubleshooting
-
-- “Missing VITE_ALGOD_SERVER”
-  - Ensure `.env` exists in `projects/frontend` and values are set
-  - Restart `npm run dev`
-
-- “Missing VITE_PINATA_JWT” or IPFS upload fails
-  - Generate JWT in Pinata dashboard and add to `.env`
-  - Confirm gateway works or remove custom gateway (defaults to `https://ipfs.io/ipfs`)
-
-- Indexer queries return empty
-  - Verify `VITE_INDEXER_SERVER` is a TestNet Indexer and `VITE_ALGOD_NETWORK=testnet`
-  - Confirm correct App ID in Bank card
-
-- Transactions fail
-  - Ensure wallet is connected and funded
-  - For Bank, input a valid App ID or deploy via the card
-
----
-
-## 9) CI/CD (Optional)
-
-- Integrate with GitHub Actions for lint/type/test and deployments.
-- Deploy smart contracts via `algokit deploy`.
-- Deploy frontend to Vercel/Netlify; add these `.env` variables to hosting settings.
-
----
-
-## 10) Copy‑ready AI Prompt Snippets
-
-Use these verbatim as you work card‑by‑card:
-
-- Home:
-```
-Redesign projects/frontend/src/Home.tsx using TailwindCSS for a modern Web3 landing page with a strong hero, concise subtitle, and a grid of feature cards (Counter, Bank, Payments, Create Token, Mint NFT). Keep all wallet/navigation logic, props, and handlers EXACTLY as-is. Modify only JSX and Tailwind classes.
+**MintNFT.tsx** (Line ~35):
+```typescript
+const APP_ID = 123456789  // Replace with your App ID
 ```
 
-- Transact:
-```
-Redesign projects/frontend/src/components/Transact.tsx into a clean payments UI (recipient input, 1 ALGO send button, success message area). Keep ALL existing logic and handlers unchanged. Modify only JSX/Tailwind. Optionally add an ASA tab UI mock without changing logic.
-```
-
-- Bank:
-```
-Enhance projects/frontend/src/components/Bank.tsx with a dashboard feel: App ID input, deploy section, deposit/withdraw cards, scrollable statements and depositors lists with explorer links. Maintain ALL logic and calls as-is; only update layout and Tailwind classes.
+**Bank.tsx** (Line ~40):
+```typescript
+const [appId, setAppId] = useState<number>(123456789)  // Replace
 ```
 
-- Create ASA:
-```
-Redesign projects/frontend/src/components/CreateASA.tsx to a professional token creation form with inputs (Name, Unit, Decimals, Total), helper text, and a prominent Create button with loading state. Keep all ASA creation logic intact; change only JSX/Tailwind.
+**Transact.tsx** (Line ~30):
+```typescript
+const [appId] = useState<number>(123456789)  // Replace
 ```
 
-- Mint NFT:
+#### **4.3 Uncomment Real Contract Calls**
+
+In each file, find sections marked `// TODO: Call TicketContract...` and:
+1. **Uncomment** the contract integration code
+2. **Comment out** or remove placeholder simulation code
+3. Update method calls to match generated client
+
+**Example in MintNFT.tsx:**
+```typescript
+// BEFORE (placeholder)
+// const simulatedTicketId = Math.floor(Math.random() * 1000000)
+// setPurchasedTicketId(simulatedTicketId)
+
+// AFTER (real contract)
+const result = await ticketClient.send.purchaseTicket({
+  args: { payment: paymentTxn },
+  sender: activeAddress
+})
+setPurchasedTicketId(Number(result.return))
 ```
-Redesign projects/frontend/src/components/MintNFT.tsx for a sleek NFT minter: file upload with preview, name/description fields, visible Mint button, and progress indicators. Keep Pinata, IPFS, and mint logic untouched; only adjust JSX/Tailwind.
+
+#### **4.4 Restart Development Server**
+
+```powershell
+# Stop current server (Ctrl+C)
+# Restart
+pnpm run dev
 ```
 
 ---
 
-Links cited:
-- Base template repo: [marotipatre/Hackseries-2-QuickStart-template](https://github.com/marotipatre/Hackseries-2-QuickStart-template)
-- Algorand Developer Portal: `https://dev.algorand.co/`
-- AlgoKit Workshops: `https://algorand.co/algokit-workshops`
-- Algodevs YouTube: `https://www.youtube.com/@algodevs`
-- Pinata API Keys: `https://app.pinata.cloud/developers/api-keys`
+### **Step 5: Test on TestNet**
+
+1. **Open App**: http://localhost:5174/
+2. **Connect Wallet**: Click "Connect Wallet" → Select Pera/Defly
+3. **Purchase Ticket**:
+   - Navigate to "Purchase Tickets"
+   - Click "Purchase Ticket"
+   - Confirm transaction in wallet
+   - Wait for confirmation
+   - Ticket appears in "My Tickets"
+4. **Verify on Explorer**:
+   - Click "View on AlgoExplorer" link
+   - See your ticket NFT on TestNet
+
+---
+
+## 📁 Project Structure
+
+```
+TicketChain/
+├── projects/
+│   ├── contracts/                      # Smart Contract (Backend)
+│   │   ├── smart_contracts/
+│   │   │   ├── ticket_contract/
+│   │   │   │   ├── contract.py         # ✨ Main contract logic
+│   │   │   │   └── deploy_config.py    # Deployment configuration
+│   │   │   └── artifacts/
+│   │   │       └── ticket_contract/
+│   │   │           ├── TicketContract.approval.teal    # Compiled TEAL
+│   │   │           ├── TicketContract.clear.teal
+│   │   │           ├── TicketContract.arc56.json       # ABI spec
+│   │   │           └── ticket_contract_client.py       # Python client
+│   │   ├── tests/                      # Contract tests
+│   │   ├── pyproject.toml              # Poetry config
+│   │   ├── .env                        # ⚠️ Secret keys (gitignored)
+│   │   └── .env.example                # Template for team
+│   │
+│   └── frontend/                       # React UI (Frontend)
+│       ├── src/
+│       │   ├── components/
+│       │   │   ├── Home.tsx            # Landing page
+│       │   │   ├── MintNFT.tsx         # 🎫 Purchase Ticket interface
+│       │   │   ├── Bank.tsx            # 👨‍💼 Event Organizer Panel
+│       │   │   ├── Transact.tsx        # 🔄 Resale Marketplace
+│       │   │   └── ConnectWallet.tsx   # Wallet connection
+│       │   ├── contracts/              # Generated TS clients
+│       │   ├── utils/
+│       │   │   ├── ticketAssets.ts     # ✨ NFT ownership utilities
+│       │   │   └── network/
+│       │   │       └── getAlgoClientConfigs.ts
+│       │   ├── App.tsx                 # React Router setup
+│       │   └── main.tsx                # Entry point
+│       ├── public/
+│       ├── package.json                # Dependencies
+│       ├── vite.config.ts              # Vite configuration
+│       ├── tailwind.config.cjs         # Tailwind CSS
+│       └── .env                        # Environment config
+│
+├── README.md                           # 📖 This file
+├── TICKETING_IMPLEMENTATION_GUIDE.md   # Original implementation notes
+└── .gitignore                          # Git ignore rules
+```
+
+---
+
+## 📜 Smart Contract Documentation
+
+### **TicketContract.py**
+
+**Location:** `projects/contracts/smart_contracts/ticket_contract/contract.py`
+
+#### **Global State**
+
+| Variable | Type | Description |
+|----------|------|-------------|
+| `event_name` | String | Name of the event |
+| `total_tickets` | UInt64 | Total ticket capacity |
+| `tickets_sold` | UInt64 | Number of tickets sold |
+| `ticket_price` | UInt64 | Price per ticket (microALGO) |
+| `max_resale_price` | UInt64 | Maximum allowed resale price |
+| `organizer_royalty` | UInt64 | Royalty percentage (0-50) |
+| `organizer_address` | Account | Event organizer's wallet |
+
+#### **Methods**
+
+##### **create_event()**
+- **Purpose**: Initialize event details
+- **Access**: Creator only
+- **Parameters**: name, capacity, price, max_resale_multiplier, royalty
+
+##### **purchase_ticket()**
+- **Purpose**: Mint NFT ticket and transfer to buyer
+- **Process**: Validate payment → Mint NFT → **Auto opt-in** → Transfer
+- **Returns**: Asset ID of minted ticket
+
+##### **list_for_resale()**
+- **Purpose**: List ticket on secondary market
+- **Validation**: Price ≤ max_resale_price
+
+##### **buy_resale_ticket()**
+- **Purpose**: Purchase from resale marketplace
+- **Process**: Pay seller → Pay royalty → **Auto opt-in** → Transfer NFT via clawback
+
+##### **mark_scanned()**
+- **Purpose**: Mark ticket as used at entry
+- **Access**: Organizer only
+
+##### **is_scanned()** (readonly)
+- **Returns**: True if ticket already scanned
+
+##### **get_event_info()** (readonly)
+- **Returns**: Event details (name, tickets, prices)
+
+---
+
+## 💻 Frontend Documentation
+
+### **Key Components**
+
+#### **Home.tsx**
+- Landing page with hero section
+- Live event status dashboard
+- Navigation to 4 main features
+
+#### **MintNFT.tsx** - Purchase Interface
+- Display event details
+- "My Tickets" section (shows owned NFTs)
+- Purchase button with wallet integration
+- Success view with AlgoExplorer link
+
+#### **Transact.tsx** - Resale Marketplace
+- **List Mode**: Show owned tickets, verify ownership, list for resale
+- **Buy Mode**: Browse marketplace, purchase with atomic transfer
+
+#### **Bank.tsx** - Organizer Panel
+- **Create Event**: Initialize contract
+- **Dashboard**: View sales stats
+- **Scan Tickets**: Verify ownership, mark as scanned
+
+### **Utility Functions**
+
+#### **ticketAssets.ts**
+
+```typescript
+// Fetch all ticket NFTs owned by user
+getUserTickets(userAddress, algorand): Promise<TicketAsset[]>
+
+// Verify user owns specific ticket NFT
+verifyTicketOwnership(userAddress, assetId, algorand): Promise<boolean>
+```
+
+---
+
+## 👥 Collaboration Workflow
+
+### **Setting Up GitHub Repository**
+
+```powershell
+# 1. Initialize git (if not already)
+git init
+
+# 2. Add all files
+git add .
+
+# 3. First commit
+git commit -m "Initial TicketChain implementation"
+
+# 4. Create GitHub repo and add remote
+git remote add origin https://github.com/yourusername/TicketChain.git
+
+# 5. Push to GitHub
+git branch -M main
+git push -u origin main
+```
+
+### **Team Member Onboarding**
+
+```powershell
+# Clone repository
+git clone <your-github-url>
+cd TicketChain
+
+# Follow Quick Start section
+# Each member creates their own .env files (DO NOT commit!)
+```
+
+### **Git Workflow**
+
+```powershell
+# Before starting work
+git pull origin main
+
+# Create feature branch
+git checkout -b feature/your-feature
+
+# Make changes, commit
+git add .
+git commit -m "Description"
+
+# Push and create PR
+git push origin feature/your-feature
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### **"DEPLOYER_MNEMONIC not set"**
+**Solution:** Ensure `projects/contracts/.env` has your 25-word mnemonic in quotes
+
+### **"Insufficient TestNet ALGO"**
+**Solution:** Visit https://bank.testnet.algorand.network/ and dispense more
+
+### **"Cannot destructure property 'token'"**
+**Solution:**
+```powershell
+cd projects/frontend
+rm -rf node_modules/.vite
+pnpm run dev
+```
+
+### **Connect Wallet button not working**
+**Solution:** Hard refresh browser (Ctrl+Shift+R)
+
+---
+
+## 🚀 Future Enhancements
+
+- [ ] QR code generation and scanning
+- [ ] Multi-event support
+- [ ] Ticket transfer/gifting
+- [ ] Refund mechanism
+- [ ] Mobile app (React Native)
+- [ ] Analytics dashboard
+
+---
+
+## 📝 License
+
+MIT License - Free to use for hackathons, learning, or commercial projects.
+
+---
+
+## 🙏 Acknowledgments
+
+- **Algorand Foundation** - Blockchain platform
+- **AlgoKit Team** - Development tools
+- **Original Template** - [Hackseries-2-QuickStart-template](https://github.com/marotipatre/Hackseries-2-QuickStart-template)
+
+---
+
+**Built with ❤️ on Algorand blockchain**
+
+📧 For questions: Open an issue on GitHub!
 
 

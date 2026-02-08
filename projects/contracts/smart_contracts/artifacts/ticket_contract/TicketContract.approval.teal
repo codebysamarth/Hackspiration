@@ -1,0 +1,915 @@
+#pragma version 10
+#pragma typetrack false
+
+// smart_contracts.ticket_contract.contract.TicketContract.__algopy_entrypoint_with_init() -> uint64:
+main:
+    intcblock 0 1 4 100
+    bytecblock "tickets_sold" 0x151f7c75 "event_name" "total_tickets" "ticket_price" "organizer_address" "max_resale_price" "organizer_royalty" "tickets_purchased" 0x6c697374696e675f 0x7363616e6e65645f
+    txn ApplicationID
+    bnz main_after_if_else@2
+    // smart_contracts/ticket_contract/contract.py:41
+    // self.tickets_sold = UInt64(0)
+    bytec_0 // "tickets_sold"
+    intc_0 // 0
+    app_global_put
+
+main_after_if_else@2:
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txn NumAppArgs
+    bz main_bare_routing@12
+    pushbytess 0xd0806e24 0x5433ac4c 0xed3ed3ef 0xdb26dd61 0x7471a980 0x4e9ed340 0x393c7090 // method "create_event(string,uint64,uint64,uint64,uint64)void", method "purchase_ticket(pay)uint64", method "list_for_resale(uint64,uint64)void", method "buy_resale_ticket(uint64,pay)void", method "mark_scanned(uint64)void", method "is_scanned(uint64)bool", method "get_event_info()(string,uint64,uint64,uint64,uint64)"
+    txna ApplicationArgs 0
+    match main_create_event_route@5 main_purchase_ticket_route@6 main_list_for_resale_route@7 main_buy_resale_ticket_route@8 main_mark_scanned_route@9 main_is_scanned_route@10 main_get_event_info_route@11
+
+main_after_if_else@14:
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    intc_0 // 0
+    return
+
+main_get_event_info_route@11:
+    // smart_contracts/ticket_contract/contract.py:240
+    // @abimethod(readonly=True)
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    callsub get_event_info
+    dig 4
+    len
+    itob
+    extract 6 2
+    uncover 5
+    concat
+    uncover 4
+    itob
+    uncover 4
+    itob
+    uncover 4
+    itob
+    uncover 4
+    itob
+    pushbytes 0x0022
+    uncover 4
+    concat
+    uncover 3
+    concat
+    uncover 2
+    concat
+    swap
+    concat
+    swap
+    concat
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_is_scanned_route@10:
+    // smart_contracts/ticket_contract/contract.py:227
+    // @abimethod(readonly=True)
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    // smart_contracts/ticket_contract/contract.py:227
+    // @abimethod(readonly=True)
+    callsub is_scanned
+    pushbytes 0x00
+    intc_0 // 0
+    uncover 2
+    setbit
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_mark_scanned_route@9:
+    // smart_contracts/ticket_contract/contract.py:209
+    // @abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    // smart_contracts/ticket_contract/contract.py:209
+    // @abimethod
+    callsub mark_scanned
+    intc_1 // 1
+    return
+
+main_buy_resale_ticket_route@8:
+    // smart_contracts/ticket_contract/contract.py:152
+    // @abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // smart_contracts/ticket_contract/contract.py:152
+    // @abimethod
+    callsub buy_resale_ticket
+    intc_1 // 1
+    return
+
+main_list_for_resale_route@7:
+    // smart_contracts/ticket_contract/contract.py:127
+    // @abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txna ApplicationArgs 1
+    btoi
+    txna ApplicationArgs 2
+    btoi
+    // smart_contracts/ticket_contract/contract.py:127
+    // @abimethod
+    callsub list_for_resale
+    intc_1 // 1
+    return
+
+main_purchase_ticket_route@6:
+    // smart_contracts/ticket_contract/contract.py:73
+    // @abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txn GroupIndex
+    intc_1 // 1
+    -
+    dup
+    gtxns TypeEnum
+    intc_1 // pay
+    ==
+    assert // transaction type is pay
+    // smart_contracts/ticket_contract/contract.py:73
+    // @abimethod
+    callsub purchase_ticket
+    itob
+    bytec_1 // 0x151f7c75
+    swap
+    concat
+    log
+    intc_1 // 1
+    return
+
+main_create_event_route@5:
+    // smart_contracts/ticket_contract/contract.py:47
+    // @abimethod
+    txn OnCompletion
+    !
+    assert // OnCompletion is not NoOp
+    txn ApplicationID
+    assert // can only call when not creating
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txna ApplicationArgs 1
+    extract 2 0
+    txna ApplicationArgs 2
+    btoi
+    txna ApplicationArgs 3
+    btoi
+    txna ApplicationArgs 4
+    btoi
+    txna ApplicationArgs 5
+    btoi
+    // smart_contracts/ticket_contract/contract.py:47
+    // @abimethod
+    callsub create_event
+    intc_1 // 1
+    return
+
+main_bare_routing@12:
+    // smart_contracts/ticket_contract/contract.py:5
+    // class TicketContract(ARC4Contract):
+    txn OnCompletion
+    bnz main_after_if_else@14
+    txn ApplicationID
+    !
+    assert // can only call when creating
+    intc_1 // 1
+    return
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.create_event(name: bytes, capacity: uint64, price: uint64, max_resale_multiplier: uint64, royalty: uint64) -> void:
+create_event:
+    // smart_contracts/ticket_contract/contract.py:47-55
+    // @abimethod
+    // def create_event(
+    //     self,
+    //     name: String,
+    //     capacity: UInt64,
+    //     price: UInt64,
+    //     max_resale_multiplier: UInt64,
+    //     royalty: UInt64
+    // ) -> None:
+    proto 5 0
+    // smart_contracts/ticket_contract/contract.py:59
+    // assert Txn.sender == Global.creator_address, "Only contract creator can create event"
+    txn Sender
+    global CreatorAddress
+    ==
+    assert // Only contract creator can create event
+    // smart_contracts/ticket_contract/contract.py:60
+    // assert capacity > 0, "Event capacity must be greater than 0"
+    frame_dig -4
+    assert // Event capacity must be greater than 0
+    // smart_contracts/ticket_contract/contract.py:61
+    // assert price > 0, "Ticket price must be greater than 0"
+    frame_dig -3
+    assert // Ticket price must be greater than 0
+    // smart_contracts/ticket_contract/contract.py:62
+    // assert max_resale_multiplier >= 100, "Max resale multiplier must be at least 100 (100%)"
+    frame_dig -2
+    intc_3 // 100
+    >=
+    assert // Max resale multiplier must be at least 100 (100%)
+    // smart_contracts/ticket_contract/contract.py:63
+    // assert royalty <= 50, "Organizer royalty cannot exceed 50%"
+    frame_dig -1
+    pushint 50 // 50
+    <=
+    assert // Organizer royalty cannot exceed 50%
+    // smart_contracts/ticket_contract/contract.py:65
+    // self.event_name = name
+    bytec_2 // "event_name"
+    frame_dig -5
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:66
+    // self.total_tickets = capacity
+    bytec_3 // "total_tickets"
+    frame_dig -4
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:67
+    // self.ticket_price = price
+    bytec 4 // "ticket_price"
+    frame_dig -3
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:68
+    // self.organizer_address = Txn.sender
+    bytec 5 // "organizer_address"
+    txn Sender
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:69
+    // self.organizer_royalty = royalty
+    bytec 7 // "organizer_royalty"
+    frame_dig -1
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:70
+    // self.max_resale_price = (price * max_resale_multiplier) // UInt64(100)
+    frame_dig -3
+    frame_dig -2
+    *
+    intc_3 // 100
+    /
+    bytec 6 // "max_resale_price"
+    swap
+    app_global_put
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.purchase_ticket(payment: uint64) -> uint64:
+purchase_ticket:
+    // smart_contracts/ticket_contract/contract.py:73-74
+    // @abimethod
+    // def purchase_ticket(self, payment: gtxn.PaymentTransaction) -> UInt64:
+    proto 1 1
+    // smart_contracts/ticket_contract/contract.py:79
+    // buyer = Txn.sender
+    txn Sender
+    // smart_contracts/ticket_contract/contract.py:80
+    // current_purchases = self.tickets_purchased[buyer]
+    dup
+    intc_0 // 0
+    bytec 8 // "tickets_purchased"
+    app_local_get_ex
+    assert // check self.tickets_purchased exists for account
+    // smart_contracts/ticket_contract/contract.py:82
+    // assert current_purchases < 5, "Purchase limit exceeded"
+    dup
+    pushint 5 // 5
+    <
+    assert // Purchase limit exceeded
+    // smart_contracts/ticket_contract/contract.py:83
+    // assert payment.amount == self.ticket_price, "Incorrect payment amount"
+    frame_dig -1
+    gtxns Amount
+    intc_0 // 0
+    bytec 4 // "ticket_price"
+    app_global_get_ex
+    assert // check self.ticket_price exists
+    ==
+    assert // Incorrect payment amount
+    // smart_contracts/ticket_contract/contract.py:84
+    // assert payment.receiver == Global.current_application_address, "Payment must be to contract"
+    frame_dig -1
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert // Payment must be to contract
+    // smart_contracts/ticket_contract/contract.py:85
+    // assert self.tickets_sold < self.total_tickets, "Sold out"
+    intc_0 // 0
+    bytec_0 // "tickets_sold"
+    app_global_get_ex
+    assert // check self.tickets_sold exists
+    intc_0 // 0
+    bytec_3 // "total_tickets"
+    app_global_get_ex
+    assert // check self.total_tickets exists
+    <
+    assert // Sold out
+    // smart_contracts/ticket_contract/contract.py:87
+    // self.tickets_sold += UInt64(1)
+    intc_0 // 0
+    bytec_0 // "tickets_sold"
+    app_global_get_ex
+    assert // check self.tickets_sold exists
+    intc_1 // 1
+    +
+    bytec_0 // "tickets_sold"
+    swap
+    app_global_put
+    // smart_contracts/ticket_contract/contract.py:88
+    // ticket_number = self.tickets_sold
+    intc_0 // 0
+    bytec_0 // "tickets_sold"
+    app_global_get_ex
+    assert // check self.tickets_sold exists
+    // smart_contracts/ticket_contract/contract.py:89
+    // self.tickets_purchased[buyer] = current_purchases + UInt64(1)
+    swap
+    intc_1 // 1
+    +
+    dig 2
+    bytec 8 // "tickets_purchased"
+    uncover 2
+    app_local_put
+    // smart_contracts/ticket_contract/contract.py:91-103
+    // # FIXED: Mint NFT with bytes concatenation
+    // asset_txn = itxn.AssetConfig(
+    //     total=UInt64(1),
+    //     decimals=UInt64(0),
+    //     asset_name=self.event_name.bytes + b" #" + op.itob(ticket_number),  # FIXED
+    //     unit_name=b"TIX",
+    //     url=b"ticketchain://ticket/" + op.itob(ticket_number),  # FIXED
+    //     manager=Global.current_application_address,
+    //     reserve=Global.current_application_address,
+    //     freeze=Global.current_application_address,
+    //     clawback=Global.current_application_address,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:95
+    // asset_name=self.event_name.bytes + b" #" + op.itob(ticket_number),  # FIXED
+    intc_0 // 0
+    bytec_2 // "event_name"
+    app_global_get_ex
+    assert // check self.event_name exists
+    pushbytes 0x2023
+    concat
+    swap
+    itob
+    swap
+    dig 1
+    concat
+    // smart_contracts/ticket_contract/contract.py:97
+    // url=b"ticketchain://ticket/" + op.itob(ticket_number),  # FIXED
+    pushbytes 0x7469636b6574636861696e3a2f2f7469636b65742f
+    uncover 2
+    concat
+    // smart_contracts/ticket_contract/contract.py:98
+    // manager=Global.current_application_address,
+    global CurrentApplicationAddress
+    // smart_contracts/ticket_contract/contract.py:99-101
+    // reserve=Global.current_application_address,
+    // freeze=Global.current_application_address,
+    // clawback=Global.current_application_address,
+    dupn 3
+    itxn_field ConfigAssetClawback
+    itxn_field ConfigAssetFreeze
+    itxn_field ConfigAssetReserve
+    itxn_field ConfigAssetManager
+    itxn_field ConfigAssetURL
+    // smart_contracts/ticket_contract/contract.py:96
+    // unit_name=b"TIX",
+    pushbytes 0x544958
+    itxn_field ConfigAssetUnitName
+    itxn_field ConfigAssetName
+    // smart_contracts/ticket_contract/contract.py:94
+    // decimals=UInt64(0),
+    intc_0 // 0
+    itxn_field ConfigAssetDecimals
+    // smart_contracts/ticket_contract/contract.py:93
+    // total=UInt64(1),
+    intc_1 // 1
+    itxn_field ConfigAssetTotal
+    // smart_contracts/ticket_contract/contract.py:91-92
+    // # FIXED: Mint NFT with bytes concatenation
+    // asset_txn = itxn.AssetConfig(
+    pushint 3 // acfg
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:102
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:91-103
+    // # FIXED: Mint NFT with bytes concatenation
+    // asset_txn = itxn.AssetConfig(
+    //     total=UInt64(1),
+    //     decimals=UInt64(0),
+    //     asset_name=self.event_name.bytes + b" #" + op.itob(ticket_number),  # FIXED
+    //     unit_name=b"TIX",
+    //     url=b"ticketchain://ticket/" + op.itob(ticket_number),  # FIXED
+    //     manager=Global.current_application_address,
+    //     reserve=Global.current_application_address,
+    //     freeze=Global.current_application_address,
+    //     clawback=Global.current_application_address,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    itxn CreatedAssetID
+    // smart_contracts/ticket_contract/contract.py:108-114
+    // # Opt-in buyer to the asset (required to receive NFT)
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(0),  # 0 amount = opt-in
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:112
+    // asset_amount=UInt64(0),  # 0 amount = opt-in
+    intc_0 // 0
+    itxn_field AssetAmount
+    dig 1
+    itxn_field AssetReceiver
+    dup
+    itxn_field XferAsset
+    // smart_contracts/ticket_contract/contract.py:108-109
+    // # Opt-in buyer to the asset (required to receive NFT)
+    // itxn.AssetTransfer(
+    intc_2 // axfer
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:113
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:108-114
+    // # Opt-in buyer to the asset (required to receive NFT)
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(0),  # 0 amount = opt-in
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:116-122
+    // # Transfer the NFT to buyer
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(1),
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:120
+    // asset_amount=UInt64(1),
+    intc_1 // 1
+    itxn_field AssetAmount
+    swap
+    itxn_field AssetReceiver
+    dup
+    itxn_field XferAsset
+    // smart_contracts/ticket_contract/contract.py:116-117
+    // # Transfer the NFT to buyer
+    // itxn.AssetTransfer(
+    intc_2 // axfer
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:121
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:116-122
+    // # Transfer the NFT to buyer
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(1),
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:124
+    // return ticket_asset_id
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.list_for_resale(ticket_id: uint64, asking_price: uint64) -> void:
+list_for_resale:
+    // smart_contracts/ticket_contract/contract.py:127-132
+    // @abimethod
+    // def list_for_resale(
+    //     self,
+    //     ticket_id: UInt64,
+    //     asking_price: UInt64
+    // ) -> None:
+    proto 2 0
+    // smart_contracts/ticket_contract/contract.py:136
+    // assert asking_price <= self.max_resale_price, "Price exceeds maximum resale cap"
+    intc_0 // 0
+    bytec 6 // "max_resale_price"
+    app_global_get_ex
+    assert // check self.max_resale_price exists
+    frame_dig -1
+    >=
+    assert // Price exceeds maximum resale cap
+    // smart_contracts/ticket_contract/contract.py:138
+    // box_key = Bytes(b"listing_") + op.itob(ticket_id)
+    frame_dig -2
+    itob
+    bytec 9 // 0x6c697374696e675f
+    swap
+    concat
+    // smart_contracts/ticket_contract/contract.py:139
+    // seller = Txn.sender
+    txn Sender
+    // smart_contracts/ticket_contract/contract.py:140
+    // timestamp = Global.latest_timestamp
+    global LatestTimestamp
+    // smart_contracts/ticket_contract/contract.py:143
+    // op.itob(asking_price) +
+    frame_dig -1
+    itob
+    // smart_contracts/ticket_contract/contract.py:143-144
+    // op.itob(asking_price) +
+    // seller.bytes +
+    uncover 2
+    concat
+    // smart_contracts/ticket_contract/contract.py:145
+    // op.itob(timestamp)
+    swap
+    itob
+    // smart_contracts/ticket_contract/contract.py:143-145
+    // op.itob(asking_price) +
+    // seller.bytes +
+    // op.itob(timestamp)
+    concat
+    // smart_contracts/ticket_contract/contract.py:148
+    // op.Box.create(box_key, UInt64(48))
+    dig 1
+    pushint 48 // 48
+    box_create
+    pop
+    // smart_contracts/ticket_contract/contract.py:149
+    // op.Box.put(box_key, box_value)
+    box_put
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.buy_resale_ticket(ticket_asset_id: uint64, payment: uint64) -> void:
+buy_resale_ticket:
+    // smart_contracts/ticket_contract/contract.py:152-157
+    // @abimethod
+    // def buy_resale_ticket(
+    //     self,
+    //     ticket_asset_id: UInt64,
+    //     payment: gtxn.PaymentTransaction
+    // ) -> None:
+    proto 2 0
+    // smart_contracts/ticket_contract/contract.py:161
+    // box_key = Bytes(b"listing_") + op.itob(ticket_asset_id)
+    frame_dig -2
+    itob
+    bytec 9 // 0x6c697374696e675f
+    swap
+    concat
+    // smart_contracts/ticket_contract/contract.py:163-164
+    // # FIXED: Box.get returns tuple
+    // listing_data, _exists = op.Box.get(box_key)  # FIXED
+    dup
+    box_get
+    pop
+    // smart_contracts/ticket_contract/contract.py:166
+    // asking_price = op.btoi(op.extract(listing_data, UInt64(0), UInt64(8)))
+    dup
+    intc_0 // 0
+    extract_uint64
+    // smart_contracts/ticket_contract/contract.py:167
+    // seller_address = Account(op.extract(listing_data, UInt64(8), UInt64(32)))
+    swap
+    extract 8 32
+    // smart_contracts/ticket_contract/contract.py:169
+    // assert payment.amount == asking_price, "Wrong amount"
+    frame_dig -1
+    gtxns Amount
+    dig 2
+    ==
+    assert // Wrong amount
+    // smart_contracts/ticket_contract/contract.py:170
+    // assert payment.receiver == Global.current_application_address, "Wrong receiver"
+    frame_dig -1
+    gtxns Receiver
+    global CurrentApplicationAddress
+    ==
+    assert // Wrong receiver
+    // smart_contracts/ticket_contract/contract.py:172
+    // organizer_cut = (asking_price * self.organizer_royalty) // UInt64(100)
+    intc_0 // 0
+    bytec 7 // "organizer_royalty"
+    app_global_get_ex
+    assert // check self.organizer_royalty exists
+    dig 2
+    *
+    intc_3 // 100
+    /
+    // smart_contracts/ticket_contract/contract.py:173
+    // seller_cut = asking_price - organizer_cut
+    uncover 2
+    dig 1
+    -
+    // smart_contracts/ticket_contract/contract.py:175-179
+    // itxn.Payment(
+    //     receiver=seller_address,
+    //     amount=seller_cut,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    itxn_field Amount
+    dig 1
+    itxn_field Receiver
+    // smart_contracts/ticket_contract/contract.py:175
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:178
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:175-179
+    // itxn.Payment(
+    //     receiver=seller_address,
+    //     amount=seller_cut,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:181-185
+    // itxn.Payment(
+    //     receiver=self.organizer_address,
+    //     amount=organizer_cut,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:182
+    // receiver=self.organizer_address,
+    intc_0 // 0
+    bytec 5 // "organizer_address"
+    app_global_get_ex
+    assert // check self.organizer_address exists
+    itxn_field Receiver
+    itxn_field Amount
+    // smart_contracts/ticket_contract/contract.py:181
+    // itxn.Payment(
+    intc_1 // pay
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:184
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:181-185
+    // itxn.Payment(
+    //     receiver=self.organizer_address,
+    //     amount=organizer_cut,
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:187
+    // buyer = Txn.sender
+    txn Sender
+    // smart_contracts/ticket_contract/contract.py:189-195
+    // # Opt-in buyer to the asset if not already opted in
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(0),  # 0 amount = opt-in
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:193
+    // asset_amount=UInt64(0),  # 0 amount = opt-in
+    intc_0 // 0
+    itxn_field AssetAmount
+    dup
+    itxn_field AssetReceiver
+    frame_dig -2
+    itxn_field XferAsset
+    // smart_contracts/ticket_contract/contract.py:189-190
+    // # Opt-in buyer to the asset if not already opted in
+    // itxn.AssetTransfer(
+    intc_2 // axfer
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:194
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:189-195
+    // # Opt-in buyer to the asset if not already opted in
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(0),  # 0 amount = opt-in
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:197-204
+    // # Transfer NFT from seller to buyer (using clawback since contract is manager)
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_sender=seller_address,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(1),
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_begin
+    // smart_contracts/ticket_contract/contract.py:202
+    // asset_amount=UInt64(1),
+    intc_1 // 1
+    itxn_field AssetAmount
+    itxn_field AssetReceiver
+    itxn_field AssetSender
+    frame_dig -2
+    itxn_field XferAsset
+    // smart_contracts/ticket_contract/contract.py:197-198
+    // # Transfer NFT from seller to buyer (using clawback since contract is manager)
+    // itxn.AssetTransfer(
+    intc_2 // axfer
+    itxn_field TypeEnum
+    // smart_contracts/ticket_contract/contract.py:203
+    // fee=UInt64(0)
+    intc_0 // 0
+    itxn_field Fee
+    // smart_contracts/ticket_contract/contract.py:197-204
+    // # Transfer NFT from seller to buyer (using clawback since contract is manager)
+    // itxn.AssetTransfer(
+    //     xfer_asset=ticket_asset_id,
+    //     asset_sender=seller_address,
+    //     asset_receiver=buyer,
+    //     asset_amount=UInt64(1),
+    //     fee=UInt64(0)
+    // ).submit()
+    itxn_submit
+    // smart_contracts/ticket_contract/contract.py:206
+    // op.Box.delete(box_key)
+    box_del
+    pop
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.mark_scanned(ticket_id: uint64) -> void:
+mark_scanned:
+    // smart_contracts/ticket_contract/contract.py:209-210
+    // @abimethod
+    // def mark_scanned(self, ticket_id: UInt64) -> None:
+    proto 1 0
+    // smart_contracts/ticket_contract/contract.py:214
+    // assert Txn.sender == self.organizer_address, "Only event organizer can scan tickets"
+    txn Sender
+    intc_0 // 0
+    bytec 5 // "organizer_address"
+    app_global_get_ex
+    assert // check self.organizer_address exists
+    ==
+    assert // Only event organizer can scan tickets
+    // smart_contracts/ticket_contract/contract.py:216
+    // box_key = Bytes(b"scanned_") + op.itob(ticket_id)
+    frame_dig -1
+    itob
+    bytec 10 // 0x7363616e6e65645f
+    swap
+    concat
+    // smart_contracts/ticket_contract/contract.py:218-219
+    // # FIXED: Box.length returns tuple
+    // existing_length, _exists = op.Box.length(box_key)  # FIXED
+    dup
+    box_len
+    pop
+    // smart_contracts/ticket_contract/contract.py:220
+    // assert existing_length == 0, "Ticket already scanned"
+    !
+    assert // Ticket already scanned
+    // smart_contracts/ticket_contract/contract.py:222
+    // scan_timestamp = Global.latest_timestamp
+    global LatestTimestamp
+    // smart_contracts/ticket_contract/contract.py:223
+    // op.Box.create(box_key, UInt64(8))
+    dig 1
+    pushint 8 // 8
+    box_create
+    pop
+    // smart_contracts/ticket_contract/contract.py:224
+    // op.Box.put(box_key, op.itob(scan_timestamp))
+    itob
+    box_put
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.is_scanned(ticket_id: uint64) -> uint64:
+is_scanned:
+    // smart_contracts/ticket_contract/contract.py:227-228
+    // @abimethod(readonly=True)
+    // def is_scanned(self, ticket_id: UInt64) -> bool:
+    proto 1 1
+    // smart_contracts/ticket_contract/contract.py:232
+    // box_key = Bytes(b"scanned_") + op.itob(ticket_id)
+    frame_dig -1
+    itob
+    bytec 10 // 0x7363616e6e65645f
+    swap
+    concat
+    // smart_contracts/ticket_contract/contract.py:234-235
+    // # FIXED: Box.length returns tuple
+    // box_length, _exists = op.Box.length(box_key)  # FIXED
+    box_len
+    pop
+    // smart_contracts/ticket_contract/contract.py:237
+    // return box_length > 0
+    intc_0 // 0
+    >
+    retsub
+
+
+// smart_contracts.ticket_contract.contract.TicketContract.get_event_info() -> bytes, uint64, uint64, uint64, uint64:
+get_event_info:
+    // smart_contracts/ticket_contract/contract.py:246
+    // self.event_name,
+    intc_0 // 0
+    bytec_2 // "event_name"
+    app_global_get_ex
+    assert // check self.event_name exists
+    // smart_contracts/ticket_contract/contract.py:247
+    // self.total_tickets,
+    intc_0 // 0
+    bytec_3 // "total_tickets"
+    app_global_get_ex
+    assert // check self.total_tickets exists
+    // smart_contracts/ticket_contract/contract.py:248
+    // self.tickets_sold,
+    intc_0 // 0
+    bytec_0 // "tickets_sold"
+    app_global_get_ex
+    assert // check self.tickets_sold exists
+    // smart_contracts/ticket_contract/contract.py:249
+    // self.ticket_price,
+    intc_0 // 0
+    bytec 4 // "ticket_price"
+    app_global_get_ex
+    assert // check self.ticket_price exists
+    // smart_contracts/ticket_contract/contract.py:250
+    // self.max_resale_price
+    intc_0 // 0
+    bytec 6 // "max_resale_price"
+    app_global_get_ex
+    assert // check self.max_resale_price exists
+    // smart_contracts/ticket_contract/contract.py:245-251
+    // return (
+    //     self.event_name,
+    //     self.total_tickets,
+    //     self.tickets_sold,
+    //     self.ticket_price,
+    //     self.max_resale_price
+    // )
+    retsub
