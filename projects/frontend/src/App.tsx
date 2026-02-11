@@ -1,10 +1,10 @@
 import { SupportedWallet, WalletId, WalletManager, WalletProvider } from '@txnlab/use-wallet-react'
 import { SnackbarProvider } from 'notistack'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './Home'
-import MintNFT from './components/MintNFT'
-import Bank from './components/Bank'
-import Transact from './components/Transact'
+import Home from './Home.js'
+import MintNFT from './components/MintNFT.js'
+import Bank from './components/Bank.js'
+import Transact from './components/Transact.js'
 import { getAlgodConfigFromViteEnvironment, getKmdConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
 
 let supportedWallets: SupportedWallet[]

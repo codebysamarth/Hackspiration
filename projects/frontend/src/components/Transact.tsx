@@ -2,9 +2,20 @@ import { algo, AlgorandClient } from '@algorandfoundation/algokit-utils'
 import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useState, useEffect, useMemo } from 'react'
+import algosdk from 'algosdk'
 import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { getUserTickets, verifyTicketOwnership, TicketAsset } from '../utils/ticketAssets'
-// import { TicketContractClient } from '../contracts/TicketContract'
+import { TicketContractFactory } from '../contracts/TicketContract.js'
+import { HARDCODED_APP_ID, SINGLE_ORGANIZER_MODE } from '../config/organizerConfig'
+
+// Get stored app ID from localStorage or use hardcoded in single-organizer mode
+const getStoredAppId = (): bigint => {
+  if (SINGLE_ORGANIZER_MODE && HARDCODED_APP_ID > BigInt(0)) {
+    return HARDCODED_APP_ID
+  }
+  const stored = localStorage.getItem('TICKET_CONTRACT_APP_ID')
+  return stored ? BigInt(stored) : BigInt(0)
+}
 
 type ResaleListing = {
   ticketAssetId: number
@@ -22,11 +33,15 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
   const [loading, setLoading] = useState<boolean>(false)
   const [mode, setMode] = useState<'list' | 'buy'>('buy')
   
+  // Dynamic app ID from localStorage
+  const [appId, setAppId] = useState(getStoredAppId())
+  
   // List ticket state
   const [ticketAssetId, setTicketAssetId] = useState<string>('')
   const [askingPrice, setAskingPrice] = useState<string>('')
-  const [maxResalePrice, setMaxResalePrice] = useState<number>(75) // From contract
-  const [appId] = useState<number>(0) // Should come from props or context
+  const [maxResalePrice, setMaxResalePrice] = useState<number>(0)
+  const [eventDate, setEventDate] = useState<number>(0)
+  const [isExpired, setIsExpired] = useState(false)
   
   // WHY: Track user's owned tickets for easy selection when listing
   // REASON: Users shouldn't need to manually find asset IDs - we show their tickets
@@ -42,9 +57,40 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
     return AlgorandClient.fromConfig({ algodConfig, indexerConfig })
   }, [])
 
+  // Listen for app ID changes in localStorage (only in multi-organizer mode)
+  useEffect(() => {
+    if (SINGLE_ORGANIZER_MODE) return // No dynamic switching
+    
+    const sync = () => {
+      const newId = getStoredAppId()
+      if (newId !== appId && newId > BigInt(0)) setAppId(newId)
+    }
+    window.addEventListener('storage', sync)
+    const interval = setInterval(sync, 2000)
+    return () => { window.removeEventListener('storage', sync); clearInterval(interval) }
+  }, [appId])
+
   const { enqueueSnackbar } = useSnackbar()
 
   const { transactionSigner, activeAddress } = useWallet()
+
+  // Fetch max resale price from contract global state when modal opens
+  useEffect(() => {
+    const fetchMaxResalePrice = async () => {
+      if (appId === BigInt(0)) return
+      try {
+        const factory = new TicketContractFactory({ algorand })
+        const client = factory.getAppClientById({ appId })
+        const gs = await client.state.global.getAll()
+        setMaxResalePrice(Number(gs.maxResalePrice ?? 0) / 1_000_000)
+        setEventDate(Number(gs.eventDate ?? 0))
+        setIsExpired(Number(gs.eventDate ?? 0) > 0 && Date.now() / 1000 > Number(gs.eventDate ?? 0))
+      } catch (e) {
+        console.error('Failed to fetch max resale price:', e)
+      }
+    }
+    if (openModal) void fetchMaxResalePrice()
+  }, [openModal, appId, algorand])
 
   // Fetch resale listings on modal open
   useEffect(() => {
@@ -72,35 +118,56 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
   }
 
   const fetchResaleListings = async () => {
+    if (appId === BigInt(0)) return
     try {
-      // TODO: Query contract box storage for resale listings
-      // const client = new TicketContractClient({ appId: BigInt(appId), algorand })
-      // const boxes = await algorand.client.algod.getApplicationBoxes(appId).do()
-      // Parse box data to get resale listings
+      // Query contract box storage for resale listings
+      const algod = algorand.client.algod
+      const boxesResponse = await algod.getApplicationBoxes(Number(appId)).do()
       
-      // Placeholder data
-      setResaleListings([
-        {
-          ticketAssetId: 1023456,
-          seller: 'ABCD1234EFGH5678IJKL9012MNOP3456QRST7890UVWX1234YZAB5678',
-          askingPrice: 65,
-          listingId: 'listing_1',
-        },
-        {
-          ticketAssetId: 1023457,
-          seller: 'ZYXW8765VUSR4321PONM0987LKJI6543HGFE2109DCBA8765ZYXW4321',
-          askingPrice: 70,
-          listingId: 'listing_2',
-        },
-        {
-          ticketAssetId: 1023458,
-          seller: 'MNOP3456QRST7890UVWX1234YZAB5678ABCD1234EFGH5678IJKL9012',
-          askingPrice: 60,
-          listingId: 'listing_3',
-        },
-      ])
+      const listings: ResaleListing[] = []
+      
+      // Each box represents a resale listing
+      for (const box of boxesResponse.boxes) {
+        try {
+          const boxName = box.name
+          const boxData = await algod.getApplicationBoxByName(Number(appId), boxName).do()
+          
+          // Parse box data (contract format: asking_price(8) + seller(32) + timestamp(8))
+          // Box key format: "listing_" + itob(ticket_asset_id)
+          const value = boxData.value as Uint8Array
+          if (value.length >= 48) {
+            const askingPrice = Number(new DataView(value.buffer, value.byteOffset, 8).getBigUint64(0, false)) / 1_000_000
+            const seller = algosdk.encodeAddress(value.slice(8, 40))
+            // timestamp at bytes 40-48 (not needed for display)
+
+            // Extract ticket asset ID from box key: "listing_" (8 bytes) + itob(id) (8 bytes)
+            const boxNameBytes = new Uint8Array(boxName)
+            let ticketAssetId = 0
+            if (boxNameBytes.length >= 16) {
+              ticketAssetId = Number(new DataView(boxNameBytes.buffer, boxNameBytes.byteOffset + 8, 8).getBigUint64(0, false))
+            }
+            
+            // Skip scanned_ boxes (only process listing_ boxes)
+            const prefix = String.fromCharCode(...boxNameBytes.slice(0, 8))
+            if (!prefix.startsWith('listing_')) continue
+
+            listings.push({
+              ticketAssetId,
+              seller,
+              askingPrice,
+              listingId: Buffer.from(boxName).toString('hex'),
+            })
+          }
+        } catch (err) {
+          console.error('Error parsing box:', err)
+        }
+      }
+      
+      setResaleListings(listings)
     } catch (e) {
-      enqueueSnackbar(`Error loading listings: ${(e as Error).message}`, { variant: 'error' })
+      console.error('Error loading resale listings:', e)
+      // Empty listings if no boxes exist yet
+      setResaleListings([])
     }
   }
 
@@ -128,6 +195,12 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
       return
     }
 
+    if (isExpired) {
+      enqueueSnackbar('Event has ended — resale listing is closed', { variant: 'error' })
+      setLoading(false)
+      return
+    }
+
     if (price > maxResalePrice) {
       enqueueSnackbar(`Price exceeds maximum resale price of ${maxResalePrice} ALGO`, { variant: 'error' })
       setLoading(false)
@@ -136,8 +209,6 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
 
     try {
       // WHY: Verify user actually owns the ticket NFT before listing
-      // REASON: Prevent attempts to list tickets user doesn't own, which would fail
-      // on-chain. Better UX to catch this early.
       const ownsTicket = await verifyTicketOwnership(activeAddress, assetId, algorand)
       if (!ownsTicket) {
         enqueueSnackbar('You do not own this ticket NFT!', { variant: 'error' })
@@ -145,31 +216,61 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
         return
       }
       
+      const factory = new TicketContractFactory({ algorand })
+      const client = factory.getAppClientById({ appId })
+
+      // Check if ticket has been scanned — scanned tickets cannot be resold
+      try {
+        const scannedBoxKey = new Uint8Array(16)
+        const scannedEnc = new TextEncoder()
+        scannedBoxKey.set(scannedEnc.encode('scanned_'), 0)
+        new DataView(scannedBoxKey.buffer, 8, 8).setBigUint64(0, BigInt(assetId), false)
+
+        const scanCheck = await client.send.isScanned({
+          args: { ticketId: BigInt(assetId) },
+          sender: activeAddress,
+          signer: transactionSigner,
+          boxReferences: [{ appId: BigInt(Number(appId)), name: scannedBoxKey }],
+        })
+        if (scanCheck.return) {
+          enqueueSnackbar('This ticket has been scanned and cannot be resold!', { variant: 'error' })
+          setLoading(false)
+          return
+        }
+      } catch (e) {
+        // is_scanned might fail if box doesn't exist — means not scanned, proceed
+        console.log('Scan check info:', e)
+      }
+      
       enqueueSnackbar('Listing ticket for resale...', { variant: 'info' })
       
-      // TODO: Call TicketContract list_for_resale method
-      // WHY: Contract has clawback authority over the NFT (set during minting)
-      // REASON: No need to transfer NFT first - contract can move it during sale
-      // using its clawback authority. User keeps NFT until it's actually sold.
-      //
-      // const client = new TicketContractClient({
-      //   appId: BigInt(appId),
-      //   algorand,
-      //   defaultSigner: transactionSigner
-      // })
-      //
-      // const result = await client.send.listForResale({
-      //   args: {
-      //     ticketId: BigInt(assetId),
-      //     askingPrice: BigInt(price * 1000000) // Convert to microAlgos
-      //   },
-      //   sender: activeAddress
-      // })
+      // Box key = "listing_" + itob(assetId)
+      const boxKey = new Uint8Array(16)
+      const encoder = new TextEncoder()
+      boxKey.set(encoder.encode('listing_'), 0)
+      const dv = new DataView(boxKey.buffer, 8, 8)
+      dv.setBigUint64(0, BigInt(assetId), false)
+
+      // Also need scanned_ box reference since contract checks if ticket is scanned
+      const scannedRef = new Uint8Array(16)
+      scannedRef.set(encoder.encode('scanned_'), 0)
+      new DataView(scannedRef.buffer, 8, 8).setBigUint64(0, BigInt(assetId), false)
+
+      const result = await client.send.listForResale({
+        args: {
+          ticketId: BigInt(assetId),
+          askingPrice: BigInt(Math.round(price * 1_000_000)), // Convert ALGO to microAlgos
+        },
+        sender: activeAddress,
+        signer: transactionSigner,
+        boxReferences: [
+          { appId: BigInt(Number(appId)), name: boxKey },
+          { appId: BigInt(Number(appId)), name: scannedRef },
+        ],
+        extraFee: algo(0.001), // MBR for box creation
+      })
       
-      // Placeholder simulation
-      await new Promise(resolve => setTimeout(resolve, 1500))
-      
-      enqueueSnackbar(`Ticket #${assetId} listed for ${price} ALGO`, { variant: 'success' })
+      enqueueSnackbar(`Ticket #${assetId} listed for ${price} ALGO! Txn: ${result.txIds[0]}`, { variant: 'success' })
       setTicketAssetId('')
       setAskingPrice('')
       
@@ -194,33 +295,51 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
     }
 
     try {
-      enqueueSnackbar('Processing purchase...', { variant: 'info' })
+      enqueueSnackbar('Step 1/2: Opting in to ticket asset...', { variant: 'info' })
       
-      // TODO: Create payment transaction and call contract
-      // const paymentTxn = await algorand.createTransaction.payment({
-      //   sender: activeAddress,
-      //   receiver: contractAddress,
-      //   amount: algo(listing.askingPrice),
-      // })
-      //
-      // const client = new TicketContractClient({
-      //   appId: BigInt(appId),
-      //   algorand,
-      //   defaultSigner: transactionSigner
-      // })
-      //
-      // const result = await client.send.buyResaleTicket({
-      //   args: {
-      //     ticketAssetId: listing.ticketAssetId,
-      //     payment: paymentTxn
-      //   },
-      //   sender: activeAddress
-      // })
+      // Step 1: Buyer opts-in to the ticket asset
+      try {
+        await algorand.send.assetOptIn({
+          sender: activeAddress,
+          signer: transactionSigner,
+          assetId: BigInt(listing.ticketAssetId),
+        })
+      } catch (e: any) {
+        console.log('Asset opt-in info:', e?.message || 'May already be opted in')
+      }
+
+      enqueueSnackbar('Step 2/2: Purchasing resale ticket...', { variant: 'info' })
       
-      // Placeholder simulation
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      // Step 2: Create payment + call buy_resale_ticket
+      const appAddress = algosdk.getApplicationAddress(Number(appId))
+      const paymentTxn = await algorand.createTransaction.payment({
+        sender: activeAddress,
+        receiver: appAddress,
+        amount: algo(listing.askingPrice),
+        extraFee: algo(0.003), // Extra for 3 inner txns (pay seller + pay organizer + asset transfer)
+      })
       
-      enqueueSnackbar(`Successfully purchased Ticket #${listing.ticketAssetId} for ${listing.askingPrice} ALGO`, { variant: 'success' })
+      // Box key for the listing
+      const boxKey = new Uint8Array(16)
+      const enc = new TextEncoder()
+      boxKey.set(enc.encode('listing_'), 0)
+      const bv = new DataView(boxKey.buffer, 8, 8)
+      bv.setBigUint64(0, BigInt(listing.ticketAssetId), false)
+
+      const factory = new TicketContractFactory({ algorand })
+      const client = factory.getAppClientById({ appId })
+      
+      const result = await client.send.buyResaleTicket({
+        args: {
+          ticketAssetId: BigInt(listing.ticketAssetId),
+          payment: paymentTxn,
+        },
+        sender: activeAddress,
+        signer: transactionSigner,
+        boxReferences: [{ appId: BigInt(Number(appId)), name: boxKey }],
+      })
+      
+      enqueueSnackbar(`Successfully purchased Ticket #${listing.ticketAssetId} for ${listing.askingPrice} ALGO! Txn: ${result.txIds[0]}`, { variant: 'success' })
       
       // Refresh listings
       void fetchResaleListings()
@@ -262,6 +381,12 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
           {mode === 'list' && (
             <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
               <h4 className="font-bold text-xl text-gray-800 mb-4">List Your Ticket for Resale</h4>
+              
+              {isExpired && (
+                <div className="alert alert-error mb-4">
+                  <span>Event has ended — listing is closed. No new resale listings allowed.</span>
+                </div>
+              )}
               
               <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-4 mb-6">
                 <p className="text-gray-700 text-sm">

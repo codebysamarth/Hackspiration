@@ -1,14 +1,17 @@
-// src/components/Home.tsx
 import { useWallet } from '@txnlab/use-wallet-react'
-import React, { useState } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import ConnectWallet from './components/ConnectWallet'
-import AppCalls from './components/AppCalls'
-import SendAlgo from './components/SendAlgo'
-import MintNFT from './components/MintNFT'
-import CreateASA from './components/CreateASA'
-import AssetOptIn from './components/AssetOptIn'
-import Bank from './components/Bank'
+import { AlgorandClient } from '@algorandfoundation/algokit-utils'
+import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from './utils/network/getAlgoClientConfigs'
+import { TicketContractFactory } from './contracts/TicketContract'
+import { ORGANIZER_ADDRESS, HARDCODED_APP_ID, SINGLE_ORGANIZER_MODE } from './config/organizerConfig'
+import ConnectWallet from './components/ConnectWallet.js'
+import AppCalls from './components/AppCalls.js'
+import SendAlgo from './components/SendAlgo.js'
+import MintNFT from './components/MintNFT.js'
+import CreateASA from './components/CreateASA.js'
+import AssetOptIn from './components/AssetOptIn.js'
+import Bank from './components/Bank.js'
 
 interface HomeProps {}
 
@@ -23,12 +26,75 @@ const Home: React.FC<HomeProps> = () => {
   const { activeAddress } = useWallet()
   const navigate = useNavigate()
 
-  // Event data state (placeholder values - will be fetched from contract)
-  const [eventName] = useState<string>('Algorand Developer Summit 2026')
-  const [ticketsAvailable] = useState<number>(250)
-  const [totalTickets] = useState<number>(500)
-  const [ticketPrice] = useState<number>(50)
-  const [maxResalePrice] = useState<number>(75)
+  // Real event data state — fetched from blockchain contract
+  const [eventName, setEventName] = useState<string>('No Event Created')
+  const [ticketsSold, setTicketsSold] = useState<number>(0)
+  const [totalTickets, setTotalTickets] = useState<number>(0)
+  const [ticketPrice, setTicketPrice] = useState<number>(0)
+  const [maxResalePrice, setMaxResalePrice] = useState<number>(0)
+  const [eventDate, setEventDate] = useState<number>(0)
+  const [eventLocation, setEventLocation] = useState<string>('')
+  const [eventLoading, setEventLoading] = useState<boolean>(false)
+
+  const algorand = useMemo(() => {
+    const algodConfig = getAlgodConfigFromViteEnvironment()
+    const indexerConfig = getIndexerConfigFromViteEnvironment()
+    return AlgorandClient.fromConfig({ algodConfig, indexerConfig })
+  }, [])
+
+  // Fetch live event data from deployed contract using state.global (no sender needed)
+  useEffect(() => {
+    const fetchEventData = async () => {
+      // Get App ID: hardcoded in single-organizer mode, otherwise from localStorage
+      let appIdToUse: string | null
+      if (SINGLE_ORGANIZER_MODE && HARDCODED_APP_ID > BigInt(0)) {
+        appIdToUse = HARDCODED_APP_ID.toString()
+      } else {
+        appIdToUse = localStorage.getItem('TICKET_CONTRACT_APP_ID')
+      }
+      
+      if (!appIdToUse) return
+
+      setEventLoading(true)
+      try {
+        const appId = BigInt(appIdToUse)
+        const factory = new TicketContractFactory({ algorand })
+        const client = factory.getAppClientById({ appId })
+
+        // Use state.global.getAll() — reads on-chain state directly, no wallet/sender needed
+        const gs = await client.state.global.getAll()
+        setEventName(gs.eventName ?? 'Unknown')
+        setTotalTickets(Number(gs.totalTickets ?? 0))
+        setTicketsSold(Number(gs.ticketsSold ?? 0))
+        setTicketPrice(Number(gs.ticketPrice ?? 0) / 1_000_000)
+        setMaxResalePrice(Number(gs.maxResalePrice ?? 0) / 1_000_000)
+        setEventDate(Number(gs.eventDate ?? 0))
+        setEventLocation(gs.eventLocation ?? '')
+      } catch (e) {
+        console.error('Failed to fetch event data:', e)
+        // If the stored App ID is stale / incompatible, clear it (only in multi-organizer mode)
+        if (!SINGLE_ORGANIZER_MODE) {
+          localStorage.removeItem('TICKET_CONTRACT_APP_ID')
+        }
+        setTotalTickets(0)
+        setEventName(SINGLE_ORGANIZER_MODE ? 'Event not configured' : 'No Event Created')
+      } finally {
+        setEventLoading(false)
+      }
+    }
+
+    void fetchEventData()
+
+    // Listen for localStorage changes (only in multi-organizer mode)
+    if (!SINGLE_ORGANIZER_MODE) {
+      const onStorage = () => void fetchEventData()
+      window.addEventListener('storage', onStorage)
+      return () => window.removeEventListener('storage', onStorage)
+    }
+    
+    // No cleanup needed in single-organizer mode
+    return undefined
+  }, [algorand])
 
   const toggleWalletModal = () => {
     console.log('Toggle wallet modal clicked! Current state:', openWalletModal)
@@ -81,33 +147,84 @@ const Home: React.FC<HomeProps> = () => {
 
           {/* Live Event Status Section */}
           <div className="backdrop-blur-lg bg-white/10 rounded-3xl p-8 shadow-2xl border border-white/20 mb-12 max-w-4xl mx-auto">
-            <h2 className="text-2xl font-bold text-white mb-6 text-center">🎪 Live Event Status</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Event Name</p>
-                <p className="text-white text-xl font-semibold">{eventName}</p>
-              </div>
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Availability</p>
-                <p className="text-white text-xl font-semibold">
-                  {ticketsAvailable} / {totalTickets} tickets
-                </p>
-                <div className="w-full bg-white/10 rounded-full h-2 mt-3">
-                  <div 
-                    className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full transition-all"
-                    style={{ width: `${(ticketsAvailable / totalTickets) * 100}%` }}
-                  ></div>
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold text-white text-center flex-1">🎪 Live Event Status</h2>
+              {totalTickets > 0 && (
+                <button
+                  className="btn btn-sm btn-ghost text-purple-200 hover:text-white"
+                  onClick={() => {
+                    localStorage.removeItem('TICKET_CONTRACT_APP_ID')
+                    setTotalTickets(0)
+                    setEventName('No Event Created')
+                    setTicketsSold(0)
+                    setTicketPrice(0)
+                    setMaxResalePrice(0)
+                    setEventDate(0)
+                    setEventLocation('')
+                    window.dispatchEvent(new Event('storage'))
+                  }}
+                  title="Clear saved event data and start fresh"
+                >
+                  🗑️ Reset
+                </button>
+              )}
+            </div>
+            {totalTickets > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Event Name</p>
+                  <p className="text-white text-xl font-semibold">{eventLoading ? '...' : eventName}</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Tickets Sold / Total</p>
+                  <p className="text-white text-xl font-semibold">
+                    {ticketsSold} / {totalTickets} tickets
+                  </p>
+                  <div className="w-full bg-white/10 rounded-full h-2 mt-3">
+                    <div 
+                      className="bg-gradient-to-r from-purple-400 to-blue-400 h-2 rounded-full transition-all"
+                      style={{ width: `${totalTickets > 0 ? (ticketsSold / totalTickets) * 100 : 0}%` }}
+                    ></div>
+                  </div>
+                  <p className="text-purple-200/60 text-xs mt-2">{totalTickets - ticketsSold} remaining</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Ticket Price</p>
+                  <p className="text-white text-xl font-semibold">{ticketPrice} ALGO</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Max Resale Price</p>
+                  <p className="text-white text-xl font-semibold">{maxResalePrice} ALGO</p>
+                </div>
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Event Date</p>
+                  <p className="text-white text-xl font-semibold">
+                    {eventDate > 0 ? new Date(eventDate * 1000).toLocaleString() : 'Not set'}
+                  </p>
+                  {eventDate > 0 && Date.now() / 1000 > eventDate && (
+                    <span className="badge badge-error mt-2">Expired</span>
+                  )}
+                  {eventDate > 0 && Date.now() / 1000 <= eventDate && (
+                    <span className="badge badge-success mt-2">Upcoming</span>
+                  )}
+                </div>
+                <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+                  <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Location</p>
+                  <p className="text-white text-xl font-semibold">{eventLocation || 'TBD'}</p>
                 </div>
               </div>
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Ticket Price</p>
-                <p className="text-white text-xl font-semibold">{ticketPrice} ALGO</p>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-purple-200/80 text-lg">
+                  {SINGLE_ORGANIZER_MODE ? 'Event not configured yet' : 'No event deployed yet'}
+                </p>
+                <p className="text-purple-300/60 text-sm mt-2">
+                  {SINGLE_ORGANIZER_MODE 
+                    ? 'The event organizer needs to set up the contract first' 
+                    : 'Create an event from the Organizer Panel to see live data here'}
+                </p>
               </div>
-              <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-                <p className="text-purple-300 text-sm uppercase tracking-wide mb-2">Max Resale Price</p>
-                <p className="text-white text-xl font-semibold">{maxResalePrice} ALGO</p>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* Feature Grid */}
@@ -173,7 +290,7 @@ const Home: React.FC<HomeProps> = () => {
                 <button 
                   className="w-full bg-white/10 hover:bg-white/20 text-white font-semibold py-3 px-6 rounded-xl border border-white/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   disabled={!activeAddress}
-                  onClick={() => navigate('/organizer')}
+                  onClick={() => navigate('/organizer?tab=scan')}
                 >
                   Scan
                 </button>

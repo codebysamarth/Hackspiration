@@ -1,0 +1,9 @@
+{
+  "devDependencies": {
+    "@types/react-router-dom": "^5.3.3"
+  },
+  "dependencies": {
+    "@txnlab/use-wallet-react": "^4.5.0",
+    "algosdk": "^3.5.2"
+  }
+}

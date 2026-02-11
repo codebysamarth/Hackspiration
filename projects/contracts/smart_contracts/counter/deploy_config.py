@@ -23,6 +23,10 @@ def deploy() -> None:
         on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
     )
 
+    logger.info(
+        f"Counter app ID: {app_client.app_id} | Address: {app_client.app_address} | Operation: {result.operation_performed}"
+    )
+
     if result.operation_performed in [
         algokit_utils.OperationPerformed.Create,
         algokit_utils.OperationPerformed.Replace,

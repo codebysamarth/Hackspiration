@@ -20,12 +20,8 @@ def deploy() -> None:
         on_schema_break=algokit_utils.OnSchemaBreak.AppendApp,
     )
 
-    if result.operation_performed in [
-        algokit_utils.OperationPerformed.Create,
-        algokit_utils.OperationPerformed.Replace,
-    ]:
-        logger.info(
-            f"Deployed Bank app {app_client.app_id} to address {app_client.app_address}"
-        )
+    logger.info(
+        f"Bank app ID: {app_client.app_id} | Address: {app_client.app_address} | Operation: {result.operation_performed}"
+    )
 
 
