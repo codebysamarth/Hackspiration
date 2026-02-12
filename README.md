@@ -1241,7 +1241,7 @@ git add .
 git commit -m "feat: TicketChain initial implementation"
 
 # 2. Create GitHub repo and link
-git remote add origin https://github.com/yourusername/TicketChain.git
+git remote add origin https://github.com/codebysamarth/TicketChain.git
 git branch -M main
 git push -u origin main
 ```
@@ -1249,7 +1249,7 @@ git push -u origin main
 #### **Team Member Onboarding**
 ```powershell
 # Clone repository
-git clone https://github.com/yourusername/TicketChain.git
+git clone https://github.com/codebysamarth/TicketChain.git
 cd TicketChain
 
 # Setup contracts
@@ -1425,24 +1425,6 @@ sendParams: {
 ## 📝 License
 
 MIT License - Free to use for hackathons, learning, or commercial projects.
-
----
-
-## 🙏 Acknowledgments
-
-- **Algorand Foundation** - For the sustainable, fast, and developer-friendly blockchain
-- **AlgoKit Team** - For the incredible development toolkit and documentation
-- **TxnLab** - For the `use-wallet-react` library making multi-wallet support easy
-- **Open Source Community** - React, TypeScript, Tailwind, and all the amazing tools we used
-
----
-
-## 📞 Contact & Links
-
-- **GitHub Repository**: [Your Repo URL]
-- **Live Demo**: [Deployed App URL] (if available)
-- **TestNet Explorer**: [AlgoExplorer TestNet](https://testnet.explorer.perawallet.app/)
-- **Documentation**: This README + [FUTURE_SCOPE.md](FUTURE_SCOPE.md)
 
 ---
 
