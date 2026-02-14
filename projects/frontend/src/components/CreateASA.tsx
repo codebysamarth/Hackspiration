@@ -3,6 +3,11 @@ import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useMemo, useState } from 'react'
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Coins } from 'lucide-react'
 
 interface CreateASAProps {
   openModal: boolean
@@ -51,21 +56,36 @@ const CreateASA = ({ openModal, closeModal }: CreateASAProps) => {
   }
 
   return (
-    <dialog id="create_asa_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-2xl mb-4">Create Fungible Token (ASA)</h3>
-        <div className="flex flex-col gap-3">
-          <input className="input input-bordered" placeholder="Asset name" value={name} onChange={(e) => setName(e.target.value)} />
-          <input className="input input-bordered" placeholder="Unit name" value={unit} onChange={(e) => setUnit(e.target.value)} />
-          <input className="input input-bordered" placeholder="Decimals" value={decimals} onChange={(e) => setDecimals(e.target.value)} />
-          <input className="input input-bordered" placeholder="Total (base units)" value={total} onChange={(e) => setTotal(e.target.value)} />
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) closeModal() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Coins className="h-5 w-5 text-primary" />Create Fungible Token (ASA)</DialogTitle>
+          <DialogDescription>Create a new Algorand Standard Asset</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="asaName">Asset name</Label>
+            <Input id="asaName" className="mt-1.5" placeholder="Asset name" value={name} onChange={(e) => setName(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="unitName">Unit name</Label>
+            <Input id="unitName" className="mt-1.5" placeholder="Unit name" value={unit} onChange={(e) => setUnit(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="asaDecimals">Decimals</Label>
+            <Input id="asaDecimals" className="mt-1.5" placeholder="Decimals" value={decimals} onChange={(e) => setDecimals(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="asaTotal">Total (base units)</Label>
+            <Input id="asaTotal" className="mt-1.5" placeholder="Total (base units)" value={total} onChange={(e) => setTotal(e.target.value)} />
+          </div>
         </div>
-        <div className="modal-action">
-          <button className={`btn btn-primary ${loading ? 'loading' : ''}`} onClick={onCreate} disabled={loading}>Create</button>
-          <button className="btn" onClick={closeModal} disabled={loading}>Close</button>
-        </div>
-      </form>
-    </dialog>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" size="sm" onClick={closeModal} disabled={loading}>Close</Button>
+          <Button onClick={onCreate} loading={loading} disabled={loading}>{!loading && 'Create'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

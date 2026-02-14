@@ -3,6 +3,11 @@ import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useMemo, useState } from 'react'
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Link } from 'lucide-react'
 
 interface AssetOptInProps {
   openModal: boolean
@@ -39,18 +44,22 @@ const AssetOptIn = ({ openModal, closeModal }: AssetOptInProps) => {
   }
 
   return (
-    <dialog id="asset_optin_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-2xl mb-4">Asset Opt-In</h3>
-        <div className="flex flex-col gap-3">
-          <input className="input input-bordered" placeholder="ASA ID" value={asaId} onChange={(e) => setAsaId(e.target.value)} />
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) closeModal() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Link className="h-5 w-5 text-primary" />Asset Opt-In</DialogTitle>
+          <DialogDescription>Opt-in to receive an Algorand Standard Asset</DialogDescription>
+        </DialogHeader>
+        <div>
+          <Label htmlFor="asaOptId">ASA ID</Label>
+          <Input id="asaOptId" className="mt-1.5" placeholder="ASA ID" value={asaId} onChange={(e) => setAsaId(e.target.value)} />
         </div>
-        <div className="modal-action">
-          <button className={`btn btn-primary ${loading ? 'loading' : ''}`} onClick={onOptIn} disabled={loading}>Opt-In</button>
-          <button className="btn" onClick={closeModal} disabled={loading}>Close</button>
-        </div>
-      </form>
-    </dialog>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" size="sm" onClick={closeModal} disabled={loading}>Close</Button>
+          <Button onClick={onOptIn} loading={loading} disabled={loading}>{!loading && 'Opt-In'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

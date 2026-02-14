@@ -7,6 +7,21 @@ import { TicketContractFactory } from '../contracts/TicketContract'
 import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { Html5Qrcode } from 'html5-qrcode'
 import { ORGANIZER_ADDRESS, HARDCODED_APP_ID, SINGLE_ORGANIZER_MODE } from '../config/organizerConfig'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import { Progress } from './ui/progress'
+import { Separator } from './ui/separator'
+import {
+  Settings, BarChart3, QrCode, DollarSign, Plus, Camera, CameraOff,
+  RefreshCw, Wallet, AlertTriangle, Info, CheckCircle2, Calendar,
+  MapPin, Users, TrendingUp, ArrowDownToLine, Eye, RotateCcw,
+  ExternalLink, Ticket,
+} from 'lucide-react'
 
 interface BankProps {
   openModal: boolean
@@ -334,271 +349,330 @@ const Bank = ({ openModal, closeModal }: BankProps) => {
   const isPast = (ts: number) => ts > 0 && Date.now() / 1000 > ts
 
   return (
-    <dialog id="organizer_panel_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box max-w-5xl bg-gradient-to-br from-purple-50 to-blue-50">
-        <h3 className="font-bold text-3xl mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-          {isOrganizer ? '⚙️ Event Organizer Panel' : '📊 Event Dashboard'}
-        </h3>
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) closeModal() }}>
+      <DialogContent className="max-w-5xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-primary" />
+            {isOrganizer ? 'Event Organizer Panel' : 'Event Dashboard'}
+          </DialogTitle>
+          <DialogDescription>Manage your events and scan tickets</DialogDescription>
+        </DialogHeader>
 
-        {/* Single-organizer mode info */}
-        {SINGLE_ORGANIZER_MODE && !isOrganizer && (
-          <div className="alert alert-info mb-6">
-            <div className="text-center w-full">
-              <p><strong>Viewer Mode:</strong> You can view event data and scan tickets.</p>
-              <p className="text-sm">Only the event organizer can create and manage events.</p>
+        <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Viewer-mode banner */}
+          {SINGLE_ORGANIZER_MODE && !isOrganizer && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <Info className="w-5 h-5 text-primary flex-shrink-0" />
+              <p className="text-sm"><strong>Viewer Mode.</strong> Only the organizer can create and manage events.</p>
             </div>
-          </div>
-        )}
+          )}
 
-        {appId && Number(appId) > 0 && (
-          <div className="bg-white rounded-xl shadow-md p-4 mb-6 border border-purple-100">
-            <div className="flex items-center justify-between">
+          {/* Contract info bar */}
+          {appId && Number(appId) > 0 && (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
               <div>
-                <span className="text-sm font-semibold text-gray-700">
-                  {SINGLE_ORGANIZER_MODE ? 'Event Contract' : 'Active Contract'}
-                </span>
-                <p className="text-lg font-mono text-purple-700 mt-1">App ID: {appId}</p>
+                <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contract</span>
+                <p className="text-sm font-mono font-semibold">App ID: {appId}</p>
               </div>
-              {eventDashboard && isPast(eventDashboard.eventDate)
-                ? <span className="badge badge-error badge-lg">Event Expired</span>
-                : <span className="badge badge-success badge-lg">Connected</span>}
-              {canManageEvents && (
-                <button className="btn btn-sm btn-ghost text-gray-500" onClick={e => {
-                  e.preventDefault()
-                  if (SINGLE_ORGANIZER_MODE) {
-                    alert('Cannot reset in single-organizer mode. Contact the organizer.')
-                    return
-                  }
-                  localStorage.removeItem('TICKET_CONTRACT_APP_ID')
-                  setAppId('')
-                  setEventDashboard(null)
-                  setRevenueData(null)
-                  setScannedTickets([])
-                  setActiveTab('create')
-                  window.dispatchEvent(new Event('storage'))
-                }} title="Clear saved App ID and start fresh">🗑️</button>
-              )}
-            </div>
-            {appAddress && <div className="text-xs text-gray-500 mt-2 break-all">App Address: {appAddress}</div>}
-          </div>
-        )}
-
-        {/* Tabs */}
-        <div className="tabs tabs-boxed bg-white/80 mb-6 shadow-md">
-          {(['create', 'manage', 'scan', 'revenue'] as const)
-            .filter(t => canCreateEvents || t !== 'create') // Hide create tab for non-organizers
-            .map(t => (
-            <button key={t} className={`tab tab-lg flex-1 ${activeTab === t ? 'tab-active bg-gradient-to-r from-purple-500 to-blue-500 text-white' : ''}`}
-              onClick={e => { e.preventDefault(); setActiveTab(t) }}>
-              {t === 'create' && '➕ Create'}{t === 'manage' && '📊 Dashboard'}
-              {t === 'scan' && '📱 Scanner'}{t === 'revenue' && '💰 Revenue'}
-            </button>
-          ))}
-        </div>
-
-        <div className="min-h-[400px]">
-          {/* ─── CREATE EVENT (organizer only) ──────── */}
-          {activeTab === 'create' && canCreateEvents && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
-              <h4 className="font-bold text-xl text-gray-800 mb-4">Create New Event</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="form-control md:col-span-2">
-                  <label className="label"><span className="label-text font-semibold">Event Name</span></label>
-                  <input className="input input-bordered" placeholder="e.g., Algorand Developer Summit 2026" value={eventName} onChange={e => setEventName(e.target.value)} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Event Date & Time</span></label>
-                  <input className="input input-bordered" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Location</span></label>
-                  <input className="input input-bordered" placeholder="e.g., Pune, India" value={eventLocation} onChange={e => setEventLocation(e.target.value)} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Total Capacity</span></label>
-                  <input className="input input-bordered" placeholder="500" type="number" value={totalCapacity} onChange={e => setTotalCapacity(e.target.value)} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Ticket Price (ALGO)</span></label>
-                  <input className="input input-bordered" placeholder="50" type="number" step="0.01" value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Max Resale (%)</span></label>
-                  <input className="input input-bordered" placeholder="200" type="number" value={maxResaleMultiplier} onChange={e => setMaxResaleMultiplier(e.target.value)} />
-                  <label className="label"><span className="label-text-alt text-gray-500">200% = max 2x price</span></label>
-                </div>
-                <div className="form-control">
-                  <label className="label"><span className="label-text font-semibold">Organizer Royalty (%)</span></label>
-                  <input className="input input-bordered" placeholder="10" type="number" min="0" max="50" value={organizerRoyalty} onChange={e => setOrganizerRoyalty(e.target.value)} />
-                  <label className="label"><span className="label-text-alt text-gray-500">Max: 50%</span></label>
-                </div>
-              </div>
-              <div className="mt-6">
-                <button className={`btn btn-lg w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 ${loading ? 'loading' : ''}`}
-                  disabled={loading || !activeAddress} onClick={e => { e.preventDefault(); void createEvent() }}>
-                  {loading ? 'Creating...' : '🎪 Create Event'}
-                </button>
-              </div>
-              <div className="alert alert-info mt-4">
-                <div className="text-sm">
-                  <p className="font-semibold">Refund Policy: 90% before 24h of event, 50% within 24h. No refund after event.</p>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ─── DASHBOARD ───────────────────────────── */}
-          {activeTab === 'manage' && (
-            <div className="space-y-4">
-              {eventDashboard ? (<>
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Event</div><div className="font-bold text-lg mt-1">{eventDashboard.eventName}</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Tickets</div><div className="font-bold text-2xl mt-1">{eventDashboard.soldTickets}/{eventDashboard.totalTickets}</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Price</div><div className="font-bold text-2xl mt-1">{eventDashboard.ticketPrice} ALGO</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Revenue</div><div className="font-bold text-2xl mt-1">{eventDashboard.revenue.toFixed(2)} ALGO</div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="bg-white rounded-xl shadow-md p-4 border border-purple-100">
-                    <div className="text-sm font-semibold text-gray-600">Event Date</div>
-                    <div className="text-lg mt-1">{fmtDate(eventDashboard.eventDate)}
-                      {isPast(eventDashboard.eventDate) ? <span className="badge badge-error ml-2">Expired</span> : eventDashboard.eventDate > 0 && <span className="badge badge-success ml-2">Upcoming</span>}
-                    </div>
-                  </div>
-                  <div className="bg-white rounded-xl shadow-md p-4 border border-purple-100">
-                    <div className="text-sm font-semibold text-gray-600">Location</div>
-                    <div className="text-lg mt-1">{eventDashboard.location || 'TBD'}</div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-md p-4 border border-purple-100">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-semibold text-gray-700">Sales Progress</span>
-                    <span className="text-sm font-semibold text-purple-600">{eventDashboard.totalTickets > 0 ? Math.round(eventDashboard.soldTickets / eventDashboard.totalTickets * 100) : 0}%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-4">
-                    <div className="bg-gradient-to-r from-purple-500 to-blue-500 h-4 rounded-full transition-all" style={{ width: `${eventDashboard.totalTickets > 0 ? eventDashboard.soldTickets / eventDashboard.totalTickets * 100 : 0}%` }}></div>
-                  </div>
-                </div>
-                <div className="bg-white rounded-xl shadow-md p-4 border border-purple-100">
-                  <div className="flex justify-between items-center mb-3">
-                    <h5 className="font-bold text-lg text-gray-800">Scanned Tickets</h5>
-                    <button className="btn btn-sm btn-ghost" onClick={e => { e.preventDefault(); void refreshScannedTickets() }}>🔄</button>
-                  </div>
-                  {scannedTickets.length === 0 ? <div className="text-sm text-gray-500 text-center py-4">None yet</div> : (
-                    <div className="overflow-x-auto max-h-48">
-                      <table className="table table-zebra w-full"><thead><tr><th>Asset ID</th><th>Scanned At</th><th>Status</th></tr></thead>
-                        <tbody>{scannedTickets.slice(0, 10).map(t => (
-                          <tr key={t.id}><td className="font-mono text-purple-600 font-bold">#{t.ticketId}</td><td>{t.timestamp ? new Date(t.timestamp * 1000).toLocaleString() : '-'}</td><td><span className="badge badge-success">✓</span></td></tr>
-                        ))}</tbody>
-                      </table>
-                    </div>
-                  )}
-                </div>
-              </>) : (
-                <div className="bg-white rounded-xl shadow-md p-8 border border-purple-100 text-center">
-                  <div className="text-6xl mb-4">📊</div><h4 className="font-bold text-xl text-gray-800 mb-2">No Event Data</h4><p className="text-gray-600">Create an event first</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* ─── SCANNER TAB with Camera QR ──────────── */}
-          {activeTab === 'scan' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
-              <h4 className="font-bold text-xl text-gray-800 mb-4">Scan & Validate Tickets</h4>
-              <div className="mb-6">
-                <div className="flex justify-between items-center mb-3">
-                  <span className="font-semibold text-gray-700">📷 Camera Scanner</span>
-                  <button className={`btn btn-sm ${scannerActive ? 'btn-error' : 'btn-primary'}`}
-                    onClick={e => { e.preventDefault(); scannerActive ? void stopScanner() : void startScanner() }} disabled={loading}>
-                    {scannerActive ? '⬛ Stop' : '📸 Start Camera'}
-                  </button>
-                </div>
-                <div id={scannerContainerId} className="w-full max-w-md mx-auto rounded-xl overflow-hidden border-2 border-dashed border-purple-300 min-h-[40px]" />
-                {scannerActive && <p className="text-sm text-center text-purple-500 mt-2 animate-pulse">Point camera at ticket QR...</p>}
-              </div>
-              <div className="divider">OR enter manually</div>
-              <div className="form-control mb-4">
-                <label className="label"><span className="label-text font-semibold">Ticket Asset ID</span></label>
-                <div className="flex gap-2">
-                  <input className="input input-bordered input-lg flex-1" placeholder="e.g., 123456789" type="number"
-                    value={ticketAssetId} onChange={e => { setTicketAssetId(e.target.value); setTicketHolder('') }} />
-                  <button className={`btn btn-outline btn-info ${verifying ? 'loading' : ''}`}
-                    onClick={e => { e.preventDefault(); void verifyTicketHolder() }} disabled={verifying || !ticketAssetId}>🔍 Verify</button>
-                </div>
-                {ticketHolder && <label className="label"><span className="label-text-alt text-info font-mono">Owner: {ticketHolder.substring(0, 20)}...{ticketHolder.slice(-8)}</span></label>}
-              </div>
-              <button className={`btn btn-lg w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white ${loading ? 'loading' : ''}`}
-                disabled={loading || !activeAddress || !appId} onClick={e => { e.preventDefault(); void markScanned() }}>
-                {loading ? 'Scanning...' : '✓ Mark as Scanned'}
-              </button>
-              <div className="divider">Recent Scans</div>
-              <div className="max-h-48 overflow-auto bg-gray-50 rounded-lg p-3">
-                {scannedTickets.length === 0 ? <div className="text-sm text-gray-500 text-center py-4">None yet</div> : (
-                  <ul className="space-y-2">{scannedTickets.slice(0, 5).map(t => (
-                    <li key={t.id} className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
-                      <div className="flex justify-between items-center">
-                        <div><span className="font-mono font-bold text-purple-600">#{t.ticketId}</span><span className="text-xs text-gray-500 ml-2">{t.timestamp ? new Date(t.timestamp * 1000).toLocaleString() : ''}</span></div>
-                        <span className="badge badge-success">✓</span>
-                      </div>
-                    </li>
-                  ))}</ul>
+              <div className="flex items-center gap-2">
+                {eventDashboard && isPast(eventDashboard.eventDate)
+                  ? <Badge variant="destructive">Expired</Badge>
+                  : <Badge variant="success">Active</Badge>}
+                {canManageEvents && !SINGLE_ORGANIZER_MODE && (
+                  <Button variant="ghost" size="sm" onClick={e => {
+                    e.preventDefault()
+                    localStorage.removeItem('TICKET_CONTRACT_APP_ID')
+                    setAppId('')
+                    setEventDashboard(null)
+                    setRevenueData(null)
+                    setScannedTickets([])
+                    setActiveTab('create')
+                    window.dispatchEvent(new Event('storage'))
+                  }}>
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    Reset
+                  </Button>
                 )}
               </div>
             </div>
           )}
 
-          {/* ─── REVENUE ANALYTICS ───────────────────── */}
-          {activeTab === 'revenue' && (
-            <div className="space-y-4">
-              {revenueData ? (<>
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)}>
+            <TabsList className="w-full">
+              {canCreateEvents && <TabsTrigger value="create" className="flex-1"><Plus className="h-3.5 w-3.5 mr-1.5" />Create</TabsTrigger>}
+              <TabsTrigger value="manage" className="flex-1"><BarChart3 className="h-3.5 w-3.5 mr-1.5" />Dashboard</TabsTrigger>
+              <TabsTrigger value="scan" className="flex-1"><QrCode className="h-3.5 w-3.5 mr-1.5" />Scanner</TabsTrigger>
+              <TabsTrigger value="revenue" className="flex-1"><DollarSign className="h-3.5 w-3.5 mr-1.5" />Revenue</TabsTrigger>
+            </TabsList>
+
+            {/* ─── CREATE EVENT ──────── */}
+            {canCreateEvents && (
+              <TabsContent value="create" className="space-y-5 mt-5">
+                <h4 className="text-lg font-semibold flex items-center gap-2"><Plus className="h-4 w-4 text-primary" />Create New Event</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="md:col-span-2">
+                    <Label htmlFor="eventName">Event Name</Label>
+                    <Input id="eventName" className="mt-1.5" placeholder="e.g., Algorand Developer Summit 2026" value={eventName} onChange={e => setEventName(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="eventDate">Event Date & Time</Label>
+                    <Input id="eventDate" className="mt-1.5" type="datetime-local" value={eventDate} onChange={e => setEventDate(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="eventLocation">Location</Label>
+                    <Input id="eventLocation" className="mt-1.5" placeholder="e.g., Pune, India" value={eventLocation} onChange={e => setEventLocation(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="totalCapacity">Total Capacity</Label>
+                    <Input id="totalCapacity" className="mt-1.5" placeholder="500" type="number" value={totalCapacity} onChange={e => setTotalCapacity(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="ticketPrice">Ticket Price (ALGO)</Label>
+                    <Input id="ticketPrice" className="mt-1.5" placeholder="50" type="number" step="0.01" value={ticketPrice} onChange={e => setTicketPrice(e.target.value)} />
+                  </div>
+                  <div>
+                    <Label htmlFor="maxResale">Max Resale (%)</Label>
+                    <Input id="maxResale" className="mt-1.5" placeholder="200" type="number" value={maxResaleMultiplier} onChange={e => setMaxResaleMultiplier(e.target.value)} />
+                    <p className="text-xs text-muted-foreground mt-1">200% = max 2x original price</p>
+                  </div>
+                  <div>
+                    <Label htmlFor="royalty">Organizer Royalty (%)</Label>
+                    <Input id="royalty" className="mt-1.5" placeholder="10" type="number" min={0} max={50} value={organizerRoyalty} onChange={e => setOrganizerRoyalty(e.target.value)} />
+                    <p className="text-xs text-muted-foreground mt-1">Max: 50%</p>
+                  </div>
+                </div>
+                <Button className="w-full h-12 text-base" disabled={loading || !activeAddress} loading={loading}
+                  onClick={e => { e.preventDefault(); void createEvent() }}>
+                  {!loading && 'Create Event'}
+                </Button>
+                <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                  <p className="text-xs"><strong>Refund Policy:</strong> 90% before 24h of event, 50% within 24h. No refund after event starts.</p>
+                </div>
+              </TabsContent>
+            )}
+
+            {/* ─── DASHBOARD ───────────────────────────── */}
+            <TabsContent value="manage" className="space-y-5 mt-5">
+              {eventDashboard ? (<>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                  <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Ticket Sales</div><div className="font-bold text-2xl mt-1">{revenueData.primaryRevenue.toFixed(2)} ALGO</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Resale Royalties</div><div className="font-bold text-2xl mt-1">{revenueData.resaleRevenue.toFixed(2)} ALGO</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-red-400 to-red-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Refunds Paid</div><div className="font-bold text-2xl mt-1">{revenueData.totalRefunded.toFixed(2)} ALGO</div>
-                  </div>
-                  <div className="bg-gradient-to-br from-amber-500 to-amber-600 rounded-xl p-4 text-white shadow-lg">
-                    <div className="text-sm opacity-80">Contract Balance</div><div className="font-bold text-2xl mt-1">{revenueData.appBalance.toFixed(4)} ALGO</div>
-                  </div>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Event</p>
+                      <p className="text-base font-semibold mt-1">{eventDashboard.eventName}</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Users className="h-3 w-3" />Tickets</p>
+                      <p className="text-2xl font-bold mt-1">{eventDashboard.soldTickets}<span className="text-sm font-normal text-muted-foreground">/{eventDashboard.totalTickets}</span></p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Ticket className="h-3 w-3" />Price</p>
+                      <p className="text-2xl font-bold mt-1">{eventDashboard.ticketPrice} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"><TrendingUp className="h-3 w-3" />Revenue</p>
+                      <p className="text-2xl font-bold text-emerald-600 mt-1">{eventDashboard.revenue.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
                 </div>
-                <div className="bg-white rounded-xl shadow-md p-6 border border-purple-100">
-                  <div className="text-sm font-semibold text-gray-600 mb-1">Net Revenue (Sales + Royalties - Refunds)</div>
-                  <div className="text-3xl font-bold text-green-600">{(revenueData.primaryRevenue + revenueData.resaleRevenue - revenueData.totalRefunded).toFixed(2)} ALGO</div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"><Calendar className="h-3 w-3" />Event Date</p>
+                      <p className="text-sm font-semibold mt-1 flex items-center gap-2">
+                        {fmtDate(eventDashboard.eventDate)}
+                        {isPast(eventDashboard.eventDate) ? <Badge variant="destructive">Expired</Badge> : eventDashboard.eventDate > 0 && <Badge variant="success">Upcoming</Badge>}
+                      </p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider flex items-center gap-1"><MapPin className="h-3 w-3" />Location</p>
+                      <p className="text-sm font-semibold mt-1">{eventDashboard.location || 'TBD'}</p>
+                    </CardContent>
+                  </Card>
                 </div>
-                <button className={`btn btn-lg w-full bg-gradient-to-r from-amber-500 to-amber-600 text-white ${loading ? 'loading' : ''}`}
-                  disabled={loading || !activeAddress || !appId || (eventDashboard ? !isPast(eventDashboard.eventDate) : true)}
-                  onClick={e => { e.preventDefault(); void withdrawRevenue() }}>
-                  {eventDashboard && !isPast(eventDashboard.eventDate)
-                    ? `💰 Withdraw After Event (${fmtDate(eventDashboard.eventDate)})` : loading ? 'Withdrawing...' : '💰 Withdraw Revenue'}
-                </button>
-                {eventDashboard && !isPast(eventDashboard.eventDate) && <p className="text-xs text-center text-gray-500 mt-1">Revenue locked until event ends to cover refunds</p>}
+                {/* Progress bar */}
+                <Card>
+                  <CardContent className="pt-5">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Sales Progress</span>
+                      <span className="text-sm font-semibold text-primary">{eventDashboard.totalTickets > 0 ? Math.round(eventDashboard.soldTickets / eventDashboard.totalTickets * 100) : 0}%</span>
+                    </div>
+                    <Progress value={eventDashboard.totalTickets > 0 ? eventDashboard.soldTickets / eventDashboard.totalTickets * 100 : 0} />
+                  </CardContent>
+                </Card>
+                {/* Scanned tickets table */}
+                <Card>
+                  <CardHeader className="pb-3">
+                    <div className="flex justify-between items-center">
+                      <CardTitle className="text-sm">Scanned Tickets</CardTitle>
+                      <Button variant="ghost" size="sm" onClick={e => { e.preventDefault(); void refreshScannedTickets() }}>
+                        <RefreshCw className="h-3.5 w-3.5" />Refresh
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    {scannedTickets.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">No tickets scanned yet</p> : (
+                      <div className="overflow-x-auto max-h-48">
+                        <table className="w-full text-sm">
+                          <thead><tr className="border-b"><th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground uppercase">Asset ID</th><th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground uppercase">Scanned At</th><th className="text-left py-2 px-3 text-xs font-medium text-muted-foreground uppercase">Status</th></tr></thead>
+                          <tbody>{scannedTickets.slice(0, 10).map(t => (
+                            <tr key={t.id} className="border-b last:border-0 hover:bg-muted/50 transition-colors"><td className="py-2 px-3 font-mono text-primary font-semibold">#{t.ticketId}</td><td className="py-2 px-3 text-muted-foreground">{t.timestamp ? new Date(t.timestamp * 1000).toLocaleString() : '-'}</td><td className="py-2 px-3"><Badge variant="success">Verified</Badge></td></tr>
+                          ))}</tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </>) : (
-                <div className="bg-white rounded-xl shadow-md p-8 border border-purple-100 text-center">
-                  <div className="text-6xl mb-4">💰</div><h4 className="font-bold text-xl text-gray-800 mb-2">No Revenue Data</h4><p className="text-gray-600">Create an event first</p>
+                <div className="text-center py-16">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <BarChart3 className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-semibold mb-1">No Event Data</p>
+                  <p className="text-sm text-muted-foreground">Create an event first to see your dashboard</p>
                 </div>
               )}
-            </div>
-          )}
+            </TabsContent>
+
+            {/* ─── SCANNER TAB ──────────── */}
+            <TabsContent value="scan" className="space-y-5 mt-5">
+              <h4 className="text-lg font-semibold flex items-center gap-2"><QrCode className="h-4 w-4 text-primary" />Scan & Validate Tickets</h4>
+              {/* Camera scanner */}
+              <Card>
+                <CardContent className="pt-5">
+                  <div className="flex justify-between items-center mb-3">
+                    <p className="text-sm font-medium">Camera Scanner</p>
+                    <Button
+                      variant={scannerActive ? 'destructive' : 'default'}
+                      size="sm"
+                      onClick={e => { e.preventDefault(); scannerActive ? void stopScanner() : void startScanner() }}
+                      disabled={loading}
+                    >
+                      {scannerActive ? <><CameraOff className="h-3.5 w-3.5" />Stop Camera</> : <><Camera className="h-3.5 w-3.5" />Start Camera</>}
+                    </Button>
+                  </div>
+                  <div id={scannerContainerId} className="w-full max-w-md mx-auto rounded-xl overflow-hidden border-2 border-dashed border-border min-h-[40px] bg-muted/30" />
+                  {scannerActive && <p className="text-xs text-center text-primary mt-2 animate-pulse">Point camera at ticket QR code...</p>}
+                </CardContent>
+              </Card>
+
+              <div className="flex items-center gap-3 text-xs text-muted-foreground"><Separator className="flex-1" />or enter manually<Separator className="flex-1" /></div>
+
+              {/* Manual entry */}
+              <div>
+                <Label htmlFor="scanAssetId">Ticket Asset ID</Label>
+                <div className="flex gap-2 mt-1.5">
+                  <Input id="scanAssetId" className="flex-1" placeholder="e.g., 123456789" type="number"
+                    value={ticketAssetId} onChange={e => { setTicketAssetId(e.target.value); setTicketHolder('') }} />
+                  <Button variant="outline" onClick={e => { e.preventDefault(); void verifyTicketHolder() }} disabled={verifying || !ticketAssetId} loading={verifying}>
+                    {!verifying && <><Eye className="h-3.5 w-3.5" />Verify</>}
+                  </Button>
+                </div>
+                {ticketHolder && <p className="text-xs text-muted-foreground mt-1.5 font-mono">Owner: {ticketHolder.substring(0, 20)}...{ticketHolder.slice(-8)}</p>}
+              </div>
+
+              <Button className="w-full h-12" variant="success" disabled={loading || !activeAddress || !appId} loading={loading}
+                onClick={e => { e.preventDefault(); void markScanned() }}>
+                {!loading && <><CheckCircle2 className="h-4 w-4" />Mark as Scanned</>}
+              </Button>
+
+              {/* Recent scans */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-sm">Recent Scans</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  {scannedTickets.length === 0 ? <p className="text-sm text-muted-foreground text-center py-4">No tickets scanned yet</p> : (
+                    <ul className="space-y-2 max-h-48 overflow-auto">{scannedTickets.slice(0, 5).map(t => (
+                      <li key={t.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/50 border">
+                        <div className="flex items-center gap-2">
+                          <span className="font-mono text-sm font-semibold text-primary">#{t.ticketId}</span>
+                          <span className="text-xs text-muted-foreground">{t.timestamp ? new Date(t.timestamp * 1000).toLocaleString() : ''}</span>
+                        </div>
+                        <Badge variant="success">Verified</Badge>
+                      </li>
+                    ))}</ul>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* ─── REVENUE ANALYTICS ───────────────────── */}
+            <TabsContent value="revenue" className="space-y-5 mt-5">
+              {revenueData ? (<>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Ticket Sales</p>
+                      <p className="text-2xl font-bold text-emerald-600 mt-1">{revenueData.primaryRevenue.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Resale Royalties</p>
+                      <p className="text-2xl font-bold text-primary mt-1">{revenueData.resaleRevenue.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Refunds Paid</p>
+                      <p className="text-2xl font-bold text-red-500 mt-1">{revenueData.totalRefunded.toFixed(2)} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="pt-5">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Contract Balance</p>
+                      <p className="text-2xl font-bold mt-1">{revenueData.appBalance.toFixed(4)} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
+                    </CardContent>
+                  </Card>
+                </div>
+                <Card className="bg-emerald-50/50 border-emerald-200">
+                  <CardContent className="pt-5">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Net Revenue</p>
+                    <p className="text-3xl font-bold text-emerald-600">{(revenueData.primaryRevenue + revenueData.resaleRevenue - revenueData.totalRefunded).toFixed(2)} <span className="text-base font-normal text-muted-foreground">ALGO</span></p>
+                  </CardContent>
+                </Card>
+                <Button className="w-full h-12" variant="warning"
+                  disabled={loading || !activeAddress || !appId || (eventDashboard ? !isPast(eventDashboard.eventDate) : true)}
+                  loading={loading}
+                  onClick={e => { e.preventDefault(); void withdrawRevenue() }}>
+                  {!loading && (
+                    eventDashboard && !isPast(eventDashboard.eventDate)
+                      ? <><Calendar className="h-4 w-4" />Withdraw After Event ({fmtDate(eventDashboard.eventDate)})</>
+                      : <><ArrowDownToLine className="h-4 w-4" />Withdraw Revenue</>
+                  )}
+                </Button>
+                {eventDashboard && !isPast(eventDashboard.eventDate) && <p className="text-xs text-center text-muted-foreground">Revenue locked until event ends to cover refunds</p>}
+              </>) : (
+                <div className="text-center py-16">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <DollarSign className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-semibold mb-1">No Revenue Data</p>
+                  <p className="text-sm text-muted-foreground">Create an event first to track revenue</p>
+                </div>
+              )}
+            </TabsContent>
+          </Tabs>
         </div>
 
-        <div className="modal-action mt-6">
-          <button className="btn btn-ghost" onClick={closeModal} disabled={loading}>Close</button>
-          <button className="btn btn-outline btn-primary" onClick={e => { e.preventDefault(); void refreshEventDashboard(); void refreshScannedTickets(); void refreshRevenueData() }} disabled={loading}>🔄 Refresh</button>
-        </div>
-      </form>
-    </dialog>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" size="sm" onClick={closeModal} disabled={loading}>Close</Button>
+          <Button variant="outline" size="sm" onClick={e => { e.preventDefault(); void refreshEventDashboard(); void refreshScannedTickets(); void refreshRevenueData() }} disabled={loading}>
+            <RefreshCw className="h-3.5 w-3.5" />Refresh
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

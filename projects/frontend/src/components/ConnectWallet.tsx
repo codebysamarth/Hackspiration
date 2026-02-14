@@ -1,5 +1,8 @@
 import { useWallet, Wallet, WalletId } from '@txnlab/use-wallet-react'
 import Account from './Account'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { AlertTriangle, ExternalLink, LogOut, Wallet as WalletIcon } from 'lucide-react'
 
 interface ConnectWalletInterface {
   openModal: boolean
@@ -12,15 +15,23 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
   const isKmd = (wallet: Wallet) => wallet.id === WalletId.KMD
 
   return (
-    <dialog id="connect_wallet_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-2xl mb-4">Select wallet provider</h3>
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) closeModal() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <WalletIcon className="h-5 w-5 text-primary" />
+            Connect Wallet
+          </DialogTitle>
+          <DialogDescription>
+            Choose a wallet to connect to TicketChain
+          </DialogDescription>
+        </DialogHeader>
 
-        <div className="grid m-2 pt-5">
+        <div className="space-y-3 py-2">
           {activeAddress && (
             <>
               <Account />
-              <div className="divider" />
+              <div className="h-px bg-border my-4" />
             </>
           )}
 
@@ -28,7 +39,7 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
             wallets.map((wallet) => (
               <button
                 data-test-id={`${wallet.id}-connect`}
-                className="btn border-teal-800 border-1  m-2"
+                className="w-full flex items-center gap-3 p-3 rounded-lg border border-border bg-card hover:bg-accent hover:border-accent-foreground/20 transition-all duration-200 text-left cursor-pointer"
                 key={`provider-${wallet.id}`}
                 onClick={() => {
                   return wallet.connect()
@@ -38,66 +49,45 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
                   <img
                     alt={`wallet_icon_${wallet.id}`}
                     src={wallet.metadata.icon}
-                    style={{ objectFit: 'contain', width: '30px', height: 'auto' }}
+                    className="w-8 h-8 rounded-lg object-contain"
                   />
                 )}
-                <span>{isKmd(wallet) ? 'LocalNet Wallet' : wallet.metadata.name}</span>
+                {isKmd(wallet) && (
+                  <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground text-sm font-semibold">K</div>
+                )}
+                <span className="text-sm font-medium">{isKmd(wallet) ? 'LocalNet Wallet' : wallet.metadata.name}</span>
               </button>
             ))}
 
           {!activeAddress && (!wallets || wallets.length === 0) && (
-            <div className="alert alert-warning shadow-lg">
-              <div>
-                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <div className="text-left">
-                  <h3 className="font-bold">No Wallet Detected!</h3>
-                  <div className="text-sm mt-2">
-                    <p className="mb-2">Please install a wallet browser extension:</p>
-                    <ul className="list-disc ml-5 space-y-1">
-                      <li>
-                        <a 
-                          href="https://chrome.google.com/webstore/detail/pera-wallet/hcmjchkfljngfdhghmjnkiiofbljggfk" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          Pera Wallet (Recommended)
-                        </a>
-                      </li>
-                      <li>
-                        <a 
-                          href="https://chrome.google.com/webstore/detail/defly-wallet/jccgkpbgpgdmjooocjikogdjkfddeifg" 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:underline"
-                        >
-                          Defly Wallet
-                        </a>
-                      </li>
-                    </ul>
-                    <p className="mt-3 text-xs text-gray-600">After installation, refresh this page and switch wallet to TestNet</p>
-                  </div>
-                </div>
+            <div className="p-4 rounded-lg bg-amber-50 border border-amber-200">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                <p className="text-sm font-semibold text-amber-800">No Wallet Detected</p>
               </div>
+              <p className="text-xs text-amber-700 mb-2">Install a wallet extension:</p>
+              <ul className="text-xs text-amber-700 space-y-1.5 ml-4 list-disc">
+                <li>
+                  <a href="https://chrome.google.com/webstore/detail/pera-wallet/hcmjchkfljngfdhghmjnkiiofbljggfk" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Pera Wallet (Recommended) <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+                <li>
+                  <a href="https://chrome.google.com/webstore/detail/defly-wallet/jccgkpbgpgdmjooocjikogdjkfddeifg" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline inline-flex items-center gap-1">
+                    Defly Wallet <ExternalLink className="h-3 w-3" />
+                  </a>
+                </li>
+              </ul>
+              <p className="text-xs text-amber-600 mt-2">After installation, refresh this page.</p>
             </div>
           )}
         </div>
 
-        <div className="modal-action ">
-          <button
-            data-test-id="close-wallet-modal"
-            className="btn"
-            onClick={() => {
-              closeModal()
-            }}
-          >
-            Close
-          </button>
+        <DialogFooter className="gap-2 sm:gap-0">
           {activeAddress && (
-            <button
-              className="btn btn-warning"
+            <Button
+              variant="destructive"
+              size="sm"
               data-test-id="logout"
               onClick={async () => {
                 if (wallets) {
@@ -105,21 +95,28 @@ const ConnectWallet = ({ openModal, closeModal }: ConnectWalletInterface) => {
                   if (activeWallet) {
                     await activeWallet.disconnect()
                   } else {
-                    // Required for logout/cleanup of inactive providers
-                    // For instance, when you login to localnet wallet and switch network
-                    // to testnet/mainnet or vice verse.
                     localStorage.removeItem('@txnlab/use-wallet:v3')
                     window.location.reload()
                   }
                 }
+                closeModal()
               }}
             >
-              Logout
-            </button>
+              <LogOut className="h-4 w-4" />
+              Disconnect
+            </Button>
           )}
-        </div>
-      </form>
-    </dialog>
+          <Button
+            variant="ghost"
+            size="sm"
+            data-test-id="close-wallet-modal"
+            onClick={() => { closeModal() }}
+          >
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 export default ConnectWallet

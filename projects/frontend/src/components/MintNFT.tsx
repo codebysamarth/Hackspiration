@@ -8,6 +8,15 @@ import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment 
 import { getUserTickets, TicketAsset } from '../utils/ticketAssets'
 import { TicketContractFactory } from '../contracts/TicketContract'
 import { ORGANIZER_ADDRESS, HARDCODED_APP_ID, SINGLE_ORGANIZER_MODE } from '../config/organizerConfig'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from './ui/card'
+import { Input } from './ui/input'
+import { Separator } from './ui/separator'
+import {
+  Ticket, ExternalLink, QrCode, AlertTriangle, CheckCircle2, Info, RotateCcw, Calendar, MapPin, DollarSign, Users, ShoppingCart
+} from 'lucide-react'
 
 // Get App ID: hardcoded in single-organizer mode, otherwise from localStorage
 const getAppId = (): bigint => {
@@ -307,27 +316,29 @@ const MintNFT = ({ openModal, closeModal }: MintNFTProps) => {
   }
 
   return (
-    <dialog id="purchase_ticket_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box max-w-2xl bg-gradient-to-br from-purple-50 to-blue-50">
-        {/* Header */}
-        <h3 className="font-bold text-3xl mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-          🎫 Purchase Event Ticket
-        </h3>
-        
-        {/* App ID Info */}
-        {appId && appId > BigInt(0) ? (
-          <div className="alert alert-info mb-4">
-            <div className="flex items-center justify-between w-full">
-              <div>
-                <span className="font-semibold">
-                  {SINGLE_ORGANIZER_MODE ? 'Event App ID:' : 'Current Event App ID:'}
-                </span>{' '}
-                <code className="bg-white px-2 py-1 rounded text-sm">{appId.toString()}</code>
-              </div>
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) resetAndClose() }}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            Purchase Event Ticket
+          </DialogTitle>
+          <DialogDescription>Mint your NFT ticket on Algorand</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-5 max-h-[70vh] overflow-y-auto pr-1">
+          {/* App ID Info */}
+          {appId && appId > BigInt(0) ? (
+            <div className="flex items-center justify-between p-3 rounded-lg bg-primary/5 border border-primary/20">
+              <p className="text-sm flex items-center gap-2">
+                <Info className="h-4 w-4 text-primary" />
+                <span className="font-medium">{SINGLE_ORGANIZER_MODE ? 'Event App ID:' : 'Current Event App ID:'}</span>
+                <code className="bg-background px-1.5 py-0.5 rounded text-xs font-mono border">{appId.toString()}</code>
+              </p>
               {!SINGLE_ORGANIZER_MODE && (
-                <button
-                  type="button"
-                  className="btn btn-xs btn-ghost"
+                <Button
+                  variant="ghost"
+                  size="sm"
                   onClick={() => {
                     const newId = prompt('Enter Event App ID:', appId.toString())
                     if (newId && !isNaN(Number(newId))) {
@@ -339,25 +350,25 @@ const MintNFT = ({ openModal, closeModal }: MintNFTProps) => {
                   }}
                 >
                   Change
-                </button>
+                </Button>
               )}
             </div>
-          </div>
-        ) : (
-          <div className="alert alert-warning mb-4">
-            <div className="text-center w-full">
+          ) : (
+            <div className="p-4 rounded-lg bg-amber-50 border border-amber-200 text-center">
+              <AlertTriangle className="h-5 w-5 text-amber-600 mx-auto mb-2" />
               {SINGLE_ORGANIZER_MODE ? (
                 <>
-                  <p className="font-semibold">Event not configured</p>
-                  <p className="text-sm">The organizer needs to set up the event App ID first.</p>
+                  <p className="font-medium text-amber-800 text-sm">Event not configured</p>
+                  <p className="text-xs text-amber-600 mt-1">The organizer needs to set up the event App ID first.</p>
                 </>
               ) : (
                 <>
-                  <p className="font-semibold">No event connected</p>
-                  <p className="text-sm">Create an event from the Organizer Panel first, or enter an App ID below.</p>
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-outline mt-2"
+                  <p className="font-medium text-amber-800 text-sm">No event connected</p>
+                  <p className="text-xs text-amber-600 mt-1">Create an event from the Organizer Panel first, or enter an App ID.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2"
                     onClick={() => {
                       const newId = prompt('Enter Event App ID:')
                       if (newId && !isNaN(Number(newId)) && Number(newId) > 0) {
@@ -369,150 +380,165 @@ const MintNFT = ({ openModal, closeModal }: MintNFTProps) => {
                     }}
                   >
                     Enter App ID
-                  </button>
+                  </Button>
                 </>
               )}
             </div>
-          </div>
-        )}
+          )}
 
-        {!purchasedTicketId ? (
-          <>
-            {/* WHY: Display user's owned ticket NFTs
-                REASON: Users need to see their purchased tickets and access asset IDs
-                for resale or verification purposes. Shows proof of ownership. */}
-            {activeAddress && myTickets.length > 0 && (
-              <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-blue-100">
-                <h4 className="font-semibold text-xl text-gray-800 mb-4">
-                  🎫 My Tickets ({myTickets.length})
-                </h4>
-                <div className="space-y-3 max-h-[400px] overflow-y-auto">
-                  {myTickets.map((ticket) => (
-                    <div key={ticket.assetId} className="p-4 bg-gradient-to-r from-purple-50 to-blue-50 rounded-lg hover:shadow-md transition-shadow">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <p className="font-semibold text-gray-800">{ticket.name}</p>
-                          <p className="text-sm text-gray-600">Asset ID: {ticket.assetId}</p>
+          {!purchasedTicketId ? (
+            <>
+              {/* My Tickets Section */}
+              {activeAddress && myTickets.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center justify-between">
+                      <span className="flex items-center gap-2">
+                        <Ticket className="h-4 w-4 text-primary" />
+                        My Tickets
+                      </span>
+                      <Badge variant="secondary">{myTickets.length}</Badge>
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="divide-y max-h-[280px] overflow-y-auto">
+                      {myTickets.map((ticket) => (
+                        <div key={ticket.assetId} className="py-3 first:pt-0 last:pb-0">
+                          <div className="flex justify-between items-center">
+                            <div>
+                              <p className="text-sm font-medium">{ticket.name}</p>
+                              <p className="text-xs text-muted-foreground font-mono">ID: {ticket.assetId}</p>
+                            </div>
+                            <div className="flex gap-1.5">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={(e) => { e.preventDefault(); setShowQrFor(showQrFor === ticket.assetId ? null : ticket.assetId) }}
+                              >
+                                <QrCode className="h-3.5 w-3.5" />
+                                {showQrFor === ticket.assetId ? 'Hide' : 'QR'}
+                              </Button>
+                              <Button variant="ghost" size="sm" asChild>
+                                <a
+                                  href={`https://testnet.explorer.perawallet.app/asset/${ticket.assetId}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <ExternalLink className="h-3.5 w-3.5" />
+                                </a>
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                                disabled={refundLoading !== null}
+                                loading={refundLoading === ticket.assetId}
+                                onClick={(e) => { e.preventDefault(); void handleRefund(ticket.assetId) }}
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                                Refund
+                              </Button>
+                            </div>
+                          </div>
+                          {/* QR Code for venue scanning */}
+                          {showQrFor === ticket.assetId && (
+                            <div className="mt-3 flex flex-col items-center bg-muted/50 rounded-xl p-4 border">
+                              <QRCodeSVG value={String(ticket.assetId)} size={160} level="H" />
+                              <p className="text-xs text-muted-foreground mt-2">Show this QR at event entry</p>
+                              <Badge variant="outline" className="mt-1 font-mono">#{ticket.assetId}</Badge>
+                            </div>
+                          )}
                         </div>
-                        <div className="flex gap-2">
-                          <button
-                            className="btn btn-sm btn-outline btn-accent"
-                            onClick={(e) => { e.preventDefault(); setShowQrFor(showQrFor === ticket.assetId ? null : ticket.assetId) }}
-                          >
-                            {showQrFor === ticket.assetId ? '✖ Hide QR' : '📱 Show QR'}
-                          </button>
-                          <a
-                            href={`https://testnet.explorer.perawallet.app/asset/${ticket.assetId}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="btn btn-sm btn-outline btn-primary"
-                          >
-                            View 🔗
-                          </a>
-                          <button
-                            className={`btn btn-sm btn-outline btn-warning ${refundLoading === ticket.assetId ? 'loading' : ''}`}
-                            disabled={refundLoading !== null}
-                            onClick={(e) => { e.preventDefault(); void handleRefund(ticket.assetId) }}
-                          >
-                            💸 Refund
-                          </button>
-                        </div>
-                      </div>
-                      {/* QR Code for venue scanning */}
-                      {showQrFor === ticket.assetId && (
-                        <div className="mt-4 flex flex-col items-center bg-white rounded-xl p-4 border border-purple-200">
-                          <QRCodeSVG value={String(ticket.assetId)} size={180} level="H" />
-                          <p className="text-xs text-gray-500 mt-2">Show this QR at event entry for scanning</p>
-                          <p className="text-sm font-mono font-bold text-purple-600 mt-1">#{ticket.assetId}</p>
-                        </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {/* Event Info Card */}
-            <div className="bg-white rounded-xl shadow-lg p-6 mb-6 border border-purple-100">
-              <h4 className="font-semibold text-xl text-gray-800 mb-4">Event Details</h4>
+                  </CardContent>
+                </Card>
+              )}
               
-              <div className="space-y-3">
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600 font-medium">App ID</span>
-                  <span className="text-xs font-mono text-gray-700 bg-gray-50 px-2 py-1 rounded">{appId.toString()}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600 font-medium">Event Name</span>
-                  <span className="text-gray-900 font-semibold">{eventName}</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                  <span className="text-gray-600 font-medium">Ticket Price</span>
-                  <span className="text-purple-600 font-bold text-xl">{ticketPrice} ALGO</span>
-                </div>
-                
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600 font-medium">Tickets Remaining</span>
-                  <span className="font-bold text-lg">
-                    {ticketsRemaining} / {totalTickets}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2 border-t border-gray-200">
-                  <span className="text-gray-600 font-medium">Event Date</span>
-                  <span className="text-gray-900 font-semibold">
-                    {eventDate > 0 ? new Date(eventDate * 1000).toLocaleString() : 'Not set'}
-                    {isExpired && <span className="badge badge-error badge-sm ml-2">Expired</span>}
-                  </span>
-                </div>
-                <div className="flex justify-between items-center py-2">
-                  <span className="text-gray-600 font-medium">Location</span>
-                  <span className="text-gray-900 font-semibold">{eventLocation || 'TBD'}</span>
-                </div>
+              {/* Event Details Card */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Calendar className="h-4 w-4 text-primary" />
+                    Event Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="divide-y">
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">App ID</span>
+                      <code className="text-xs font-mono bg-muted px-2 py-0.5 rounded">{appId.toString()}</code>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">Event Name</span>
+                      <span className="text-sm font-medium">{eventName}</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">Ticket Price</span>
+                      <span className="text-lg font-bold text-primary">{ticketPrice} ALGO</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">Remaining</span>
+                      <span className="text-sm font-semibold">{ticketsRemaining} <span className="text-muted-foreground font-normal">/ {totalTickets}</span></span>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">Event Date</span>
+                      <span className="text-sm font-medium flex items-center gap-2">
+                        {eventDate > 0 ? new Date(eventDate * 1000).toLocaleString() : 'Not set'}
+                        {isExpired && <Badge variant="destructive" className="text-[10px]">Expired</Badge>}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center py-2.5">
+                      <span className="text-sm text-muted-foreground">Location</span>
+                      <span className="text-sm font-medium">{eventLocation || 'TBD'}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Purchase Button */}
+              <Button
+                className="w-full h-12 text-base"
+                onClick={onPurchaseTicket}
+                disabled={loading || ticketsRemaining <= 0 || isExpired || !appId || appId === BigInt(0)}
+                loading={loading}
+                size="lg"
+              >
+                {!loading && (
+                  !appId || appId === BigInt(0) ? 'No Event Connected' : isExpired ? 'Event Expired — Sales Closed' : `Purchase Ticket — ${ticketPrice} ALGO`
+                )}
+                {loading && 'Processing...'}
+              </Button>
+            </>
+          ) : (
+            /* Success View */
+            <div className="text-center py-8 animate-fade-in">
+              <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center mx-auto mb-4">
+                <CheckCircle2 className="h-8 w-8 text-emerald-600" />
               </div>
+              <h4 className="text-xl font-semibold mb-1">Purchase Successful!</h4>
+              <p className="text-sm font-medium text-primary mb-1">{eventName}</p>
+              <p className="text-sm text-muted-foreground">Asset ID: {purchasedTicketId}</p>
+
+              <Button variant="outline" className="w-full mt-6" asChild>
+                <a 
+                  href={`https://testnet.explorer.perawallet.app/asset/${purchasedTicketId}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                  View on Explorer
+                </a>
+              </Button>
             </div>
-
-            {/* Purchase Section */}
-            <button 
-              className={`w-full btn btn-lg ${loading ? 'loading' : ''}`}
-              onClick={onPurchaseTicket}
-              disabled={loading || ticketsRemaining <= 0 || isExpired || !appId || appId === BigInt(0)}
-            >
-              {!appId || appId === BigInt(0) ? 'No Event Connected' : isExpired ? 'Event Expired — Sales Closed' : 'Purchase Ticket'}
-            </button>
-          </>
-        ) : (
-          /* Success View */
-          <div className="space-y-6 text-center">
-            <div className="text-6xl">✅</div>
-            <h4 className="font-bold text-2xl">Purchase Successful!</h4>
-            <p className="text-lg font-semibold text-purple-600">{eventName}</p>
-            <p>Asset ID: {purchasedTicketId}</p>
-
-            {/* AlgoExplorer Link */}
-            <a 
-              href={`https://testnet.explorer.perawallet.app/asset/${purchasedTicketId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="btn btn-outline btn-primary w-full"
-            >
-              View on AlgoExplorer 🔗
-            </a>
-          </div>
-        )}
-
-        {/* Modal Actions */}
-        <div className="modal-action">
-          <button 
-            className="btn btn-ghost" 
-            onClick={resetAndClose} 
-            disabled={loading}
-          >
-            Close
-          </button>
+          )}
         </div>
-      </form>
-    </dialog>
+
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={resetAndClose} disabled={loading}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

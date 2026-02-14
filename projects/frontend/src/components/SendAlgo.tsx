@@ -4,6 +4,11 @@ import { useWallet } from '@txnlab/use-wallet-react'
 import { useSnackbar } from 'notistack'
 import { useMemo, useState } from 'react'
 import { getAlgodConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Send } from 'lucide-react'
 
 interface SendAlgoProps {
   openModal: boolean
@@ -41,19 +46,28 @@ const SendAlgo = ({ openModal, closeModal }: SendAlgoProps) => {
   }
 
   return (
-    <dialog id="send_algo_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-2xl mb-4">Send Algo</h3>
-        <div className="flex flex-col gap-3">
-          <input className="input input-bordered" placeholder="Recipient address" value={to} onChange={(e) => setTo(e.target.value)} />
-          <input className="input input-bordered" placeholder="Amount (ALGO)" value={amount} onChange={(e) => setAmount(e.target.value)} />
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) closeModal() }}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2"><Send className="h-5 w-5 text-primary" />Send Algo</DialogTitle>
+          <DialogDescription>Transfer ALGO to another address</DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="recipient">Recipient address</Label>
+            <Input id="recipient" className="mt-1.5" placeholder="Recipient address" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <div>
+            <Label htmlFor="algoAmount">Amount (ALGO)</Label>
+            <Input id="algoAmount" className="mt-1.5" placeholder="Amount (ALGO)" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          </div>
         </div>
-        <div className="modal-action">
-          <button className={`btn btn-primary ${loading ? 'loading' : ''}`} onClick={onSend} disabled={loading}>Send</button>
-          <button className="btn" onClick={closeModal} disabled={loading}>Close</button>
-        </div>
-      </form>
-    </dialog>
+        <DialogFooter className="gap-2">
+          <Button variant="ghost" size="sm" onClick={closeModal} disabled={loading}>Close</Button>
+          <Button onClick={onSend} loading={loading} disabled={loading}>{!loading && 'Send'}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

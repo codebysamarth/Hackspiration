@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react'
 import { CounterClient } from '../contracts/Counter'
 import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment } from '../utils/network/getAlgoClientConfigs'
 import { AlgorandClient } from '@algorandfoundation/algokit-utils'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent } from './ui/card'
+import { Hash, Plus } from 'lucide-react'
 
 interface AppCallsInterface {
   openModal: boolean
@@ -46,34 +51,6 @@ const AppCalls = ({ openModal, setModalState }: AppCallsInterface) => {
       return 0
     }
   }
-
-  // Deploy function kept for future use; commented out per request
-  // const [deploying, setDeploying] = useState<boolean>(false)
-  // const deployContract = async () => {
-  //   setDeploying(true)
-  //   try {
-  //     const factory = new CounterFactory({
-  //       defaultSender: activeAddress ?? undefined,
-  //       algorand,
-  //     })
-  //     // Deploy multiple addresses with the same contract
-  //     const deployResult = await factory.send.create.bare()
-  //     // If you want idempotent deploy from one address
-  //     // const deployResult = await factory.deploy({
-  //     //   onSchemaBreak: OnSchemaBreak.AppendApp,
-  //     //   onUpdate: OnUpdate.AppendApp,
-  //     // })
-  //     const deployedAppId = Number(deployResult.appClient.appId)
-  //     setAppId(deployedAppId)
-  //     const count = await fetchCount(deployedAppId)
-  //     setCurrentCount(count)
-  //     enqueueSnackbar(`Contract deployed with App ID: ${deployedAppId}. Initial count: ${count}`, { variant: 'success' })
-  //   } catch (e) {
-  //     enqueueSnackbar(`Error deploying contract: ${(e as Error).message}`, { variant: 'error' })
-  //   } finally {
-  //     setDeploying(false)
-  //   }
-  // }
 
   // Auto-load current count for the fixed app ID
   useEffect(() => {
@@ -119,57 +96,55 @@ const AppCalls = ({ openModal, setModalState }: AppCallsInterface) => {
   }
 
   return (
-    <dialog id="appcalls_modal" className={`modal ${openModal ? 'modal-open' : ''} bg-slate-200`}>
-      <form method="dialog" className="modal-box">
-        <h3 className="font-bold text-lg">Counter Contract</h3>
-        <br />
+    <Dialog open={openModal} onOpenChange={(open) => setModalState(open)}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Hash className="h-5 w-5 text-primary" />
+            Counter Contract
+          </DialogTitle>
+          <DialogDescription>
+            Interact with the on-chain counter smart contract
+          </DialogDescription>
+        </DialogHeader>
         
-        <div className="flex flex-col gap-4">
+        <div className="space-y-4 py-2">
           {appId && (
-            <div className="alert alert-info flex flex-col gap-1">
-              <span>Current App ID: {appId}</span>
-              <span>Current Count: {currentCount}</span>
-            </div>
+            <Card className="bg-primary/5 border-primary/20">
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">App ID</p>
+                    <p className="text-sm font-mono font-semibold">{appId}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Count</p>
+                    <p className="text-3xl font-bold text-primary">{currentCount}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           )}
           
-          {/*
-          <div className="flex flex-col gap-2">
-            <button 
-              className={`btn btn-primary ${deploying ? 'loading' : ''}`}
-              onClick={deployContract}
-              disabled={deploying || loading}
-            >
-              {deploying ? 'Deploying...' : 'Deploy Contract'}
-            </button>
-            <p className="text-sm">Run this once to deploy the contract</p>
-          </div>
-          
-          <div className="divider">OR</div>
-          */}
-          
-          <div className="flex flex-col gap-2">
-            <button 
-              className={`btn btn-secondary ${loading ? 'loading' : ''}`}
-              onClick={incrementCounter}
-              disabled={loading || !appId}
-            >
-              {loading ? 'Processing...' : 'Increment Counter'}
-            </button>
-            <p className="text-sm">Requires deployed contract</p>
-          </div>
-          
-          <div className="modal-action">
-            <button 
-              className="btn" 
-              onClick={() => setModalState(false)}
-              disabled={loading}
-            >
-              Close
-            </button>
-          </div>
+          <Button
+            className="w-full"
+            onClick={incrementCounter}
+            disabled={loading || !appId}
+            loading={loading}
+          >
+            <Plus className="h-4 w-4" />
+            {loading ? 'Processing...' : 'Increment Counter'}
+          </Button>
+          <p className="text-xs text-muted-foreground text-center">Requires deployed contract</p>
         </div>
-      </form>
-    </dialog>
+
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={() => setModalState(false)} disabled={loading}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

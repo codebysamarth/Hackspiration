@@ -7,6 +7,17 @@ import { getAlgodConfigFromViteEnvironment, getIndexerConfigFromViteEnvironment 
 import { getUserTickets, verifyTicketOwnership, TicketAsset } from '../utils/ticketAssets'
 import { TicketContractFactory } from '../contracts/TicketContract.js'
 import { HARDCODED_APP_ID, SINGLE_ORGANIZER_MODE } from '../config/organizerConfig'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog'
+import { Button } from './ui/button'
+import { Badge } from './ui/badge'
+import { Card, CardContent } from './ui/card'
+import { Input } from './ui/input'
+import { Label } from './ui/label'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs'
+import {
+  ShoppingCart, Tag, Ticket, RefreshCw, AlertTriangle, CheckCircle2,
+  ExternalLink, DollarSign, Info,
+} from 'lucide-react'
 
 // Get stored app ID from localStorage or use hardcoded in single-organizer mode
 const getStoredAppId = (): bigint => {
@@ -352,73 +363,61 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
   }
 
   return (
-    <dialog id="resale_marketplace_modal" className={`modal ${openModal ? 'modal-open' : ''}`}>
-      <form method="dialog" className="modal-box max-w-4xl bg-gradient-to-br from-purple-50 to-blue-50">
-        {/* Header */}
-        <h3 className="font-bold text-3xl mb-6 text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-          🔄 Ticket Resale Marketplace
-        </h3>
+    <Dialog open={openModal} onOpenChange={(open) => { if (!open) setModalState(false) }}>
+      <DialogContent className="max-w-4xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <ShoppingCart className="h-5 w-5 text-primary" />
+            Resale Marketplace
+          </DialogTitle>
+          <DialogDescription>Buy and sell tickets with price controls</DialogDescription>
+        </DialogHeader>
 
-        {/* Mode Toggle */}
-        <div className="tabs tabs-boxed bg-white/80 mb-6 shadow-md">
-          <button 
-            className={`tab tab-lg flex-1 ${mode === 'buy' ? 'tab-active bg-gradient-to-r from-purple-500 to-blue-500 text-white' : ''}`}
-            onClick={(e) => { e.preventDefault(); setMode('buy') }}
-          >
-            🛒 Browse Marketplace
-          </button>
-          <button 
-            className={`tab tab-lg flex-1 ${mode === 'list' ? 'tab-active bg-gradient-to-r from-purple-500 to-blue-500 text-white' : ''}`}
-            onClick={(e) => { e.preventDefault(); setMode('list') }}
-          >
-            📝 List My Ticket
-          </button>
-        </div>
+        <div className="space-y-5 max-h-[75vh] overflow-y-auto pr-1">
+          {/* Mode Toggle */}
+          <Tabs value={mode} onValueChange={(v) => setMode(v as 'list' | 'buy')}>
+            <TabsList className="w-full">
+              <TabsTrigger value="buy" className="flex-1"><ShoppingCart className="h-3.5 w-3.5 mr-1.5" />Browse Marketplace</TabsTrigger>
+              <TabsTrigger value="list" className="flex-1"><Tag className="h-3.5 w-3.5 mr-1.5" />List My Ticket</TabsTrigger>
+            </TabsList>
 
-        {/* Content */}
-        <div className="min-h-[400px]">
-          {/* LIST TICKET MODE */}
-          {mode === 'list' && (
-            <div className="bg-white rounded-xl shadow-lg p-6 border border-purple-100">
-              <h4 className="font-bold text-xl text-gray-800 mb-4">List Your Ticket for Resale</h4>
+            {/* LIST TICKET MODE */}
+            <TabsContent value="list" className="space-y-5 mt-5">
+              <h4 className="text-lg font-semibold flex items-center gap-2"><Tag className="h-4 w-4 text-primary" />List Your Ticket for Resale</h4>
               
               {isExpired && (
-                <div className="alert alert-error mb-4">
-                  <span>Event has ended — listing is closed. No new resale listings allowed.</span>
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                  <p className="text-sm text-destructive flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Event has ended — listing is closed.</p>
                 </div>
               )}
               
-              <div className="bg-gradient-to-r from-purple-100 to-blue-100 rounded-xl p-4 mb-6">
-                <p className="text-gray-700 text-sm">
-                  💡 List your ticket on the marketplace. Maximum resale price is <span className="font-bold">{maxResalePrice} ALGO</span>
-                </p>
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-sm flex items-center gap-2"><Info className="h-4 w-4 text-primary" />Max resale price: <span className="font-semibold">{maxResalePrice} ALGO</span></p>
               </div>
 
-              {/* WHY: Show user's owned tickets for easy selection
-                  REASON: Users can click a ticket to auto-fill the asset ID instead of 
-                  manually finding it. Reduces errors and improves UX. */}
+              {/* User's owned tickets */}
               {myTickets.length > 0 && (
-                <div className="mb-6">
-                  <h5 className="font-semibold text-gray-800 mb-3">🎫 Select from My Tickets:</h5>
-                  <div className="grid grid-cols-1 gap-3 max-h-48 overflow-y-auto">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground mb-2">Select from your tickets:</p>
+                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto">
                     {myTickets.map((ticket) => (
                       <button
                         key={ticket.assetId}
                         type="button"
-                        className={`p-3 rounded-lg border-2 transition-all text-left ${
+                        className={`p-3 rounded-lg border text-left transition-all duration-200 ${
                           ticketAssetId === ticket.assetId.toString()
-                            ? 'border-purple-500 bg-purple-50'
-                            : 'border-gray-200 hover:border-purple-300 hover:bg-purple-50'
+                            ? 'border-primary bg-primary/5 ring-1 ring-primary/30'
+                            : 'border-border hover:border-primary/40 hover:bg-muted/50'
                         }`}
                         onClick={() => setTicketAssetId(ticket.assetId.toString())}
                       >
                         <div className="flex justify-between items-center">
                           <div>
-                            <p className="font-semibold text-gray-800">{ticket.name}</p>
-                            <p className="text-sm text-gray-600">Asset ID: {ticket.assetId}</p>
+                            <p className="text-sm font-medium">{ticket.name}</p>
+                            <p className="text-xs text-muted-foreground font-mono">ID: {ticket.assetId}</p>
                           </div>
                           {ticketAssetId === ticket.assetId.toString() && (
-                            <span className="text-purple-600 font-bold">✓ Selected</span>
+                            <Badge variant="default" className="text-[10px]">Selected</Badge>
                           )}
                         </div>
                       </button>
@@ -428,159 +427,101 @@ const Transact = ({ openModal, setModalState }: TransactInterface) => {
               )}
 
               <div className="space-y-4">
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">Ticket Asset ID</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g., 1023456"
-                    className="input input-bordered input-lg"
-                    value={ticketAssetId}
-                    onChange={(e) => setTicketAssetId(e.target.value)}
-                  />
-                  <label className="label">
-                    <span className="label-text-alt text-gray-500">The NFT asset ID of your ticket</span>
-                  </label>
+                <div>
+                  <Label htmlFor="listAssetId">Ticket Asset ID</Label>
+                  <Input id="listAssetId" className="mt-1.5" type="number" placeholder="e.g., 1023456"
+                    value={ticketAssetId} onChange={(e) => setTicketAssetId(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">The NFT asset ID of your ticket</p>
                 </div>
 
-                <div className="form-control">
-                  <label className="label">
-                    <span className="label-text font-semibold">Asking Price (ALGO)</span>
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="e.g., 65"
-                    step="0.01"
-                    className="input input-bordered input-lg"
-                    value={askingPrice}
-                    onChange={(e) => setAskingPrice(e.target.value)}
-                  />
-                  <label className="label">
-                    <span className="label-text-alt text-gray-500">Maximum allowed: {maxResalePrice} ALGO</span>
-                  </label>
+                <div>
+                  <Label htmlFor="askingPrice">Asking Price (ALGO)</Label>
+                  <Input id="askingPrice" className="mt-1.5" type="number" placeholder="e.g., 65" step="0.01"
+                    value={askingPrice} onChange={(e) => setAskingPrice(e.target.value)} />
+                  <p className="text-xs text-muted-foreground mt-1">Maximum allowed: {maxResalePrice} ALGO</p>
                 </div>
 
-                {/* Price validation indicator */}
+                {/* Validation */}
                 {askingPrice && Number(askingPrice) > maxResalePrice && (
-                  <div className="alert alert-error shadow-lg">
-                    <div>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Price exceeds maximum resale limit of {maxResalePrice} ALGO</span>
-                    </div>
+                  <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <p className="text-sm text-destructive flex items-center gap-2"><AlertTriangle className="h-4 w-4" />Price exceeds maximum resale limit of {maxResalePrice} ALGO</p>
                   </div>
                 )}
-
                 {askingPrice && Number(askingPrice) <= maxResalePrice && Number(askingPrice) > 0 && (
-                  <div className="alert alert-success shadow-lg">
-                    <div>
-                      <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current flex-shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Valid price - ready to list!</span>
-                    </div>
+                  <div className="p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+                    <p className="text-sm text-emerald-700 flex items-center gap-2"><CheckCircle2 className="h-4 w-4" />Valid price — ready to list</p>
                   </div>
                 )}
 
-                <button 
-                  className={`btn btn-lg w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white hover:from-purple-700 hover:to-blue-700 ${loading ? 'loading' : ''}`}
+                <Button className="w-full h-12 text-base"
                   disabled={loading || !ticketAssetId || !askingPrice || Number(askingPrice) > maxResalePrice || Number(askingPrice) <= 0}
-                  onClick={(e) => { e.preventDefault(); void handleListTicket() }}
-                >
-                  {loading ? 'Listing...' : '📝 List Ticket for Resale'}
-                </button>
+                  loading={loading}
+                  onClick={(e) => { e.preventDefault(); void handleListTicket() }}>
+                  {!loading && 'List Ticket for Resale'}
+                </Button>
               </div>
-            </div>
-          )}
+            </TabsContent>
 
-          {/* BUY MODE - MARKETPLACE */}
-          {mode === 'buy' && (
-            <div className="space-y-4">
-              <div className="flex justify-between items-center mb-4">
-                <h4 className="font-bold text-xl text-gray-800">Available Resale Tickets</h4>
-                <button 
-                  className="btn btn-sm btn-ghost"
-                  onClick={(e) => { e.preventDefault(); void fetchResaleListings() }}
-                >
-                  🔄 Refresh
-                </button>
+            {/* BUY MODE - MARKETPLACE */}
+            <TabsContent value="buy" className="space-y-5 mt-5">
+              <div className="flex justify-between items-center">
+                <h4 className="text-lg font-semibold flex items-center gap-2"><Ticket className="h-4 w-4 text-primary" />Available Tickets</h4>
+                <Button variant="ghost" size="sm" onClick={(e) => { e.preventDefault(); void fetchResaleListings() }}>
+                  <RefreshCw className="h-3.5 w-3.5" />Refresh
+                </Button>
               </div>
 
               {resaleListings.length === 0 ? (
-                <div className="bg-white rounded-xl shadow-md p-8 border border-purple-100 text-center">
-                  <div className="text-6xl mb-4">🎫</div>
-                  <h5 className="font-bold text-xl text-gray-800 mb-2">No Tickets Available</h5>
-                  <p className="text-gray-600">Check back later or be the first to list a ticket!</p>
+                <div className="text-center py-16">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                    <Ticket className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <p className="font-semibold mb-1">No Tickets Available</p>
+                  <p className="text-sm text-muted-foreground">Check back later or list your own ticket</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {resaleListings.map((listing) => (
-                    <div 
-                      key={listing.listingId}
-                      className="bg-white rounded-xl shadow-lg p-5 border border-purple-100 hover:shadow-xl hover:scale-105 transition-all duration-200"
-                    >
-                      {/* Ticket Header */}
-                      <div className="flex items-center justify-between mb-3">
-                        <div className="badge badge-lg badge-primary">Ticket #{listing.ticketAssetId}</div>
-                      </div>
-
-                      {/* Price */}
-                      <div className="mb-4">
-                        <div className="text-sm text-gray-600 mb-1">Asking Price</div>
-                        <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-blue-600">
-                          {listing.askingPrice} Ⱥ
+                    <Card key={listing.listingId} className="hover:shadow-lg transition-all duration-200">
+                      <CardContent className="pt-5">
+                        <div className="flex items-center justify-between mb-3">
+                          <Badge variant="secondary">Ticket #{listing.ticketAssetId}</Badge>
                         </div>
-                      </div>
 
-                      {/* Seller */}
-                      <div className="mb-4">
-                        <div className="text-sm text-gray-600 mb-1">Seller</div>
-                        <div className="font-mono text-xs text-gray-800 truncate">
-                          {listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}
+                        <div className="mb-4">
+                          <p className="text-xs text-muted-foreground mb-1">Asking Price</p>
+                          <p className="text-2xl font-bold">{listing.askingPrice} <span className="text-sm font-normal text-muted-foreground">ALGO</span></p>
                         </div>
-                      </div>
 
-                      {/* Buy Button */}
-                      <button 
-                        className={`btn btn-block bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700 ${
-                          loading && selectedListing?.listingId === listing.listingId ? 'loading' : ''
-                        }`}
-                        disabled={loading}
-                        onClick={(e) => {
-                          e.preventDefault()
-                          void handleBuyResaleTicket(listing)
-                        }}
-                      >
-                        {loading && selectedListing?.listingId === listing.listingId ? 'Purchasing...' : '🛒 Buy Now'}
-                      </button>
-                    </div>
+                        <div className="mb-4">
+                          <p className="text-xs text-muted-foreground mb-1">Seller</p>
+                          <p className="font-mono text-xs text-muted-foreground">{listing.seller.slice(0, 6)}...{listing.seller.slice(-4)}</p>
+                        </div>
+
+                        <Button className="w-full" variant="success"
+                          disabled={loading}
+                          loading={loading && selectedListing?.listingId === listing.listingId}
+                          onClick={(e) => { e.preventDefault(); void handleBuyResaleTicket(listing) }}>
+                          {!(loading && selectedListing?.listingId === listing.listingId) && <><DollarSign className="h-3.5 w-3.5" />Buy Now</>}
+                        </Button>
+                      </CardContent>
+                    </Card>
                   ))}
                 </div>
               )}
 
-              {/* Info Alert */}
-              <div className="alert alert-info mt-6">
-                <div className="flex items-start gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current flex-shrink-0 w-6 h-6">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                  </svg>
-                  <span className="text-sm">Purchases include organizer royalty. Ticket ownership transfers instantly on-chain.</span>
-                </div>
+              <div className="p-3 rounded-lg bg-primary/5 border border-primary/20">
+                <p className="text-xs flex items-center gap-1.5"><Info className="h-3.5 w-3.5 text-primary" />Purchases include organizer royalty. Ticket ownership transfers instantly on-chain.</p>
               </div>
-            </div>
-          )}
+            </TabsContent>
+          </Tabs>
         </div>
 
-        {/* Modal Actions */}
-        <div className="modal-action mt-6">
-          <button className="btn btn-ghost" onClick={() => setModalState(!openModal)} disabled={loading}>
-            Close
-          </button>
-        </div>
-      </form>
-    </dialog>
+        <DialogFooter>
+          <Button variant="ghost" size="sm" onClick={() => setModalState(false)} disabled={loading}>Close</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
