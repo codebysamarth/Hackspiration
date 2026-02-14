@@ -1,0 +1,7 @@
+{
+  "buildCommand": "cd projects/frontend && pnpm build",
+  "outputDirectory": "projects/frontend/dist",
+  "installCommand": "cd projects/frontend && pnpm install",
+  "framework": "vite",
+  "regions": ["pdx1"]
+}
